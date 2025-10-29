@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Store, Plus, Edit, Trash2, ExternalLink, Copy, Package } from "lucide-react";
+import { Store, Plus, Edit, Trash2, ExternalLink, Copy, Package, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Product {
   id: string;
@@ -16,31 +18,268 @@ interface Product {
   images: string[];
 }
 
+interface StoreData {
+  id: string;
+  store_name: string;
+  contact_phone: string;
+}
+
 const Dashboard = () => {
+  const [store, setStore] = useState<StoreData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   
-  const storeUrl = "sellerapp.com/my-awesome-store";
+  // Form state
+  const [productName, setProductName] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  
   const maxProducts = 12;
   const maxImagesPerProduct = 3;
 
+  useEffect(() => {
+    loadStoreAndProducts();
+  }, [user]);
+
+  const loadStoreAndProducts = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    // Load store
+    const { data: storeData, error: storeError } = await supabase
+      .from('stores')
+      .select('*')
+      .eq('seller_id', user.id)
+      .maybeSingle();
+    
+    if (storeError || !storeData) {
+      setLoading(false);
+      return;
+    }
+    
+    setStore(storeData);
+    
+    // Load products
+    const { data: productsData, error: productsError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('store_id', storeData.id)
+      .order('created_at', { ascending: false });
+    
+    if (!productsError && productsData) {
+      setProducts(productsData);
+    }
+    
+    setLoading(false);
+  };
+
   const copyStoreUrl = () => {
-    navigator.clipboard.writeText(`https://${storeUrl}`);
+    const url = `https://sellerapp.com/${store?.store_name?.toLowerCase().replace(/\s+/g, '-')}`;
+    navigator.clipboard.writeText(url);
     toast({
       title: "URL Copied!",
       description: "Share your store link with customers",
     });
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (uploadedFiles.length + files.length > maxImagesPerProduct) {
+      toast({
+        title: "Too Many Images",
+        description: `Maximum ${maxImagesPerProduct} images per product`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setUploadedFiles([...uploadedFiles, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (files: File[]): Promise<string[]> => {
+    const urls: string[] = [];
+    
+    for (const file of files) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+      
+      urls.push(publicUrl);
+    }
+    
+    return urls;
+  };
+
+  const handleSubmitProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!store) return;
+    
+    if (uploadedFiles.length === 0 && !editingProduct) {
+      toast({
+        title: "Images Required",
+        description: "Please upload at least one product image",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!editingProduct && products.length >= maxProducts) {
+      toast({
+        title: "Product Limit Reached",
+        description: `Maximum ${maxProducts} products allowed`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setUploading(true);
+    
+    try {
+      let imageUrls = editingProduct ? editingProduct.images : [];
+      
+      if (uploadedFiles.length > 0) {
+        const newUrls = await uploadImages(uploadedFiles);
+        imageUrls = [...imageUrls, ...newUrls].slice(0, maxImagesPerProduct);
+      }
+      
+      const productData = {
+        store_id: store.id,
+        name: productName,
+        description: productDescription,
+        price: parseFloat(productPrice),
+        images: imageUrls,
+      };
+      
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Product Updated",
+          description: "Your product has been updated successfully",
+        });
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert(productData);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Product Added",
+          description: "Your product has been added to your store",
+        });
+      }
+      
+      resetForm();
+      await loadStoreAndProducts();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Could not save product",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Could not delete product",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Product Deleted",
       description: "Product has been removed from your store",
     });
+    
+    await loadStoreAndProducts();
   };
+
+  const resetForm = () => {
+    setProductName("");
+    setProductDescription("");
+    setProductPrice("");
+    setProductImages([]);
+    setUploadedFiles([]);
+    setShowAddProduct(false);
+    setEditingProduct(null);
+  };
+
+  const startEdit = (product: Product) => {
+    setEditingProduct(product);
+    setProductName(product.name);
+    setProductDescription(product.description || "");
+    setProductPrice(product.price.toString());
+    setProductImages(product.images);
+    setUploadedFiles([]);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!store) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="p-8 text-center">
+          <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">No Store Found</h2>
+          <p className="text-muted-foreground mb-4">
+            You need to set up your store first
+          </p>
+          <Link to="/seller/onboarding">
+            <Button variant="hero">Set Up Store</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,18 +292,14 @@ const Dashboard = () => {
                 <Store className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">My Awesome Store</h1>
+                <h1 className="text-xl font-bold">{store.store_name}</h1>
                 <p className="text-sm text-muted-foreground">Seller Dashboard</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  Logout
-                </Button>
-              </Link>
-            </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Logout
+            </Button>
           </div>
         </div>
       </header>
@@ -75,7 +310,7 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold mb-4">Your Store URL</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm">
-              https://{storeUrl}
+              https://sellerapp.com/{store.store_name.toLowerCase().replace(/\s+/g, '-')}
             </div>
             <Button 
               variant="accent" 
@@ -85,7 +320,7 @@ const Dashboard = () => {
               <Copy className="mr-2 h-4 w-4" />
               Copy Link
             </Button>
-            <Link to={`/store/my-awesome-store`} target="_blank">
+            <Link to={`/store/${store.store_name.toLowerCase().replace(/\s+/g, '-')}`} target="_blank">
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto bg-white/10 border-white/20 text-white hover:bg-white/20"
@@ -158,7 +393,7 @@ const Dashboard = () => {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => setEditingProduct(product.id)}
+                      onClick={() => startEdit(product)}
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
@@ -185,15 +420,47 @@ const Dashboard = () => {
                 {editingProduct ? "Edit Product" : "Add New Product"}
               </h2>
               
-              <form className="space-y-4">
+              <form onSubmit={handleSubmitProduct} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Product Images (Max {maxImagesPerProduct})</Label>
                   <div className="grid grid-cols-3 gap-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center bg-muted hover:bg-muted/80 cursor-pointer transition-colors">
-                        <Plus className="h-8 w-8 text-muted-foreground" />
+                    {uploadedFiles.map((file, i) => (
+                      <div key={i} className="relative aspect-square border-2 rounded-lg overflow-hidden">
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Upload ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     ))}
+                    {productImages.map((url, i) => (
+                      <div key={`existing-${i}`} className="aspect-square border-2 rounded-lg overflow-hidden">
+                        <img 
+                          src={url} 
+                          alt={`Product ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                    {(uploadedFiles.length + productImages.length) < maxImagesPerProduct && (
+                      <label className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center bg-muted hover:bg-muted/80 cursor-pointer transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                        <Plus className="h-8 w-8 text-muted-foreground" />
+                      </label>
+                    )}
                   </div>
                 </div>
                 
@@ -202,6 +469,8 @@ const Dashboard = () => {
                   <Input
                     id="productName"
                     placeholder="e.g., Handmade Leather Bag"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
                     required
                   />
                 </div>
@@ -212,6 +481,8 @@ const Dashboard = () => {
                     id="description"
                     placeholder="Describe your product..."
                     rows={4}
+                    value={productDescription}
+                    onChange={(e) => setProductDescription(e.target.value)}
                     required
                   />
                 </div>
@@ -223,21 +494,20 @@ const Dashboard = () => {
                     type="number"
                     step="0.01"
                     placeholder="0.00"
+                    value={productPrice}
+                    onChange={(e) => setProductPrice(e.target.value)}
                     required
                   />
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button type="submit" variant="hero" className="flex-1">
-                    {editingProduct ? "Save Changes" : "Add Product"}
+                  <Button type="submit" variant="hero" className="flex-1" disabled={uploading}>
+                    {uploading ? "Saving..." : (editingProduct ? "Save Changes" : "Add Product")}
                   </Button>
                   <Button 
                     type="button" 
                     variant="outline"
-                    onClick={() => {
-                      setShowAddProduct(false);
-                      setEditingProduct(null);
-                    }}
+                    onClick={resetForm}
                   >
                     Cancel
                   </Button>

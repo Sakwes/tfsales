@@ -6,14 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Store, ArrowLeft, Phone, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (phone.length < 10) {
@@ -34,7 +37,19 @@ const Login = () => {
       return;
     }
     
-    // Simulate successful login
+    setLoading(true);
+    const { error } = await signIn(phone, pin);
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: "Login Failed",
+        description: "Invalid phone number or PIN",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Login Successful!",
       description: "Welcome back to SellerApp",
@@ -97,8 +112,8 @@ const Login = () => {
               </div>
             </div>
             
-            <Button type="submit" variant="hero" className="w-full" size="lg">
-              Login to Dashboard
+            <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+              {loading ? "Logging in..." : "Login to Dashboard"}
             </Button>
             
             <p className="text-sm text-center text-muted-foreground">

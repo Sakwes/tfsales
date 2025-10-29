@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,20 +7,40 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Store, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Onboarding = () => {
   const [storeName, setStoreName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [existingStore, setExistingStore] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function checkStore() {
+      if (!user) return;
+      const { data } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('seller_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setExistingStore(true);
+        navigate('/seller/dashboard');
+      }
+    }
+    checkStore();
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!termsAccepted) {
-      setShowTerms(true);
       toast({
         title: "Terms Required",
         description: "Please read and accept the terms and conditions",
@@ -42,6 +62,29 @@ const Onboarding = () => {
       toast({
         title: "Invalid Phone Number",
         description: "Please enter a valid contact phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
+    const { data, error } = await supabase
+      .from('stores')
+      .insert({
+        seller_id: user?.id,
+        store_name: storeName.trim(),
+        contact_phone: contactPhone,
+      })
+      .select()
+      .single();
+    
+    setLoading(false);
+    
+    if (error) {
+      toast({
+        title: "Error Creating Store",
+        description: error.message || "Could not create store",
         variant: "destructive",
       });
       return;
@@ -143,9 +186,9 @@ const Onboarding = () => {
               variant="hero" 
               className="w-full" 
               size="lg"
-              disabled={!termsAccepted}
+              disabled={!termsAccepted || loading}
             >
-              Create Your Store
+              {loading ? "Creating Store..." : "Create Your Store"}
             </Button>
           </form>
         </Card>

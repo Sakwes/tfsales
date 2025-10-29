@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Store, Phone, MessageCircle, ShoppingBag } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Product {
   id: string;
@@ -12,42 +13,91 @@ interface Product {
   images: string[];
 }
 
+interface StoreData {
+  id: string;
+  store_name: string;
+  contact_phone: string;
+  products: Product[];
+}
+
 const StoreFront = () => {
   const { storeName } = useParams();
+  const [store, setStore] = useState<StoreData | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
-  // Mock data - in real app this would come from API
-  const storeData = {
-    name: "My Awesome Store",
-    phone: "+1 (555) 123-4567",
-    products: [
-      {
-        id: "1",
-        name: "Premium Leather Wallet",
-        description: "Handcrafted genuine leather wallet with multiple card slots",
-        price: 49.99,
-        images: [],
-      },
-      {
-        id: "2",
-        name: "Wireless Earbuds",
-        description: "High-quality sound with noise cancellation",
-        price: 79.99,
-        images: [],
-      },
-      {
-        id: "3",
-        name: "Smart Watch",
-        description: "Track your fitness and stay connected",
-        price: 199.99,
-        images: [],
-      },
-    ] as Product[],
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    loadStore();
+  }, [storeName]);
+
+  const loadStore = async () => {
+    if (!storeName) return;
+    
+    setLoading(true);
+    
+    const normalizedName = storeName.toLowerCase().replace(/-/g, ' ');
+    
+    const { data: storeData, error: storeError } = await supabase
+      .from('stores')
+      .select('*')
+      .ilike('store_name', normalizedName)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (storeError || !storeData) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    
+    // Track visitor
+    await supabase
+      .from('store_visitors')
+      .insert({
+        store_id: storeData.id,
+      });
+    
+    const { data: productsData } = await supabase
+      .from('products')
+      .select('*')
+      .eq('store_id', storeData.id)
+      .order('created_at', { ascending: false });
+    
+    setStore({
+      ...storeData,
+      products: productsData || [],
+    });
+    setLoading(false);
   };
 
   const handleContactSeller = () => {
-    window.open(`https://wa.me/${storeData.phone.replace(/\D/g, '')}`, '_blank');
+    if (!store) return;
+    const phone = store.contact_phone.replace(/\D/g, '');
+    window.open(`https://wa.me/${phone}`, '_blank');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (notFound || !store) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="p-12 text-center max-w-md">
+          <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">Store Not Found</h2>
+          <p className="text-muted-foreground">
+            This store doesn't exist or has been deactivated
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,10 +109,10 @@ const StoreFront = () => {
               <Store className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold">{storeData.name}</h1>
+              <h1 className="text-3xl font-bold">{store.store_name}</h1>
               <p className="text-white/80 flex items-center gap-2 mt-1">
                 <Phone className="h-4 w-4" />
-                {storeData.phone}
+                {store.contact_phone}
               </p>
             </div>
           </div>
@@ -83,11 +133,11 @@ const StoreFront = () => {
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">Our Products</h2>
           <p className="text-muted-foreground">
-            {storeData.products.length} products available
+            {store.products.length} products available
           </p>
         </div>
 
-        {storeData.products.length === 0 ? (
+        {store.products.length === 0 ? (
           <Card className="p-12 text-center">
             <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-xl font-semibold mb-2">No Products Available</h3>
@@ -97,7 +147,7 @@ const StoreFront = () => {
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {storeData.products.map((product) => (
+            {store.products.map((product) => (
               <Card 
                 key={product.id} 
                 className="overflow-hidden shadow-card hover:shadow-glow transition-all cursor-pointer"
@@ -144,15 +194,30 @@ const StoreFront = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="grid md:grid-cols-2 gap-6 p-6">
-                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  {selectedProduct.images.length > 0 ? (
-                    <img 
-                      src={selectedProduct.images[0]} 
-                      alt={selectedProduct.name}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  ) : (
-                    <ShoppingBag className="h-24 w-24 text-muted-foreground" />
+                <div className="space-y-4">
+                  <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                    {selectedProduct.images.length > 0 ? (
+                      <img 
+                        src={selectedProduct.images[0]} 
+                        alt={selectedProduct.name}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <ShoppingBag className="h-24 w-24 text-muted-foreground" />
+                    )}
+                  </div>
+                  {selectedProduct.images.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedProduct.images.slice(1).map((img, i) => (
+                        <div key={i} className="aspect-square bg-muted rounded overflow-hidden">
+                          <img 
+                            src={img} 
+                            alt={`${selectedProduct.name} ${i + 2}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 
