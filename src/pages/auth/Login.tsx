@@ -28,10 +28,10 @@ const Login = () => {
       return;
     }
     
-    if (pin.length !== 4) {
+    if (pin.length !== 6) {
       toast({
         title: "Invalid PIN",
-        description: "PIN must be exactly 4 digits",
+        description: "PIN must be exactly 6 digits",
         variant: "destructive",
       });
       return;
@@ -96,14 +96,14 @@ const Login = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="pin">4-Digit PIN</Label>
+              <Label htmlFor="pin">6-Digit PIN</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="pin"
                   type="password"
-                  placeholder="••••"
-                  maxLength={4}
+                  placeholder="••••••"
+                  maxLength={6}
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                   className="pl-10"
