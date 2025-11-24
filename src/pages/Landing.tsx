@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Store, Smartphone, Globe, TrendingUp, Shield, Zap } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Landing = () => {
   return (
@@ -11,30 +12,28 @@ const Landing = () => {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00em0tMTYgMGMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHptMzIgMzJjMC0yLjIxIDEuNzktNCA0LTRzNCAxLjc5IDQgNC0xLjc5IDQtNCA0LTQtMS43OS00LTR6bS0xNiAwYzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00em0tMTYgMGMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30"></div>
         
         <div className="relative max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center mb-6 animate-fade-in">
-            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl">
-              <Store className="h-12 w-12 text-white" />
-            </div>
+          <div className="flex items-center justify-center mb-8 animate-fade-in">
+            <img src={logo} alt="TechFusion Logo" className="h-24 w-24" />
           </div>
           
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
-            Your Store, Online in Minutes
+            Create an Online Store in Minutes
           </h1>
           
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto animate-fade-in">
-            Create your own e-commerce store with just your phone number. 
-            Upload products, share your link, and start selling today.
+            No website needed. Just upload your products and generate your unique store link.<br />
+            Start selling on WhatsApp, Facebook and Instagram Today.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
             <Link to="/auth/register">
-              <Button size="lg" variant="accent" className="w-full sm:w-auto text-lg px-8">
-                Start Selling Now
+              <Button size="lg" className="w-full sm:w-auto text-lg px-8 bg-primary hover:bg-primary-glow text-primary-foreground">
+                Get Started Free
               </Button>
             </Link>
             <Link to="/auth/login">
               <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 bg-white/10 border-white/20 text-white hover:bg-white/20">
-                Seller Login
+                Sign in
               </Button>
             </Link>
           </div>
@@ -65,9 +64,9 @@ const Landing = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-gradient-primary p-3 rounded-lg w-fit mb-4">
-                <Smartphone className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <Smartphone className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Quick Sign Up</h3>
               <p className="text-muted-foreground">
@@ -75,9 +74,9 @@ const Landing = () => {
               </p>
             </Card>
             
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-gradient-secondary p-3 rounded-lg w-fit mb-4">
-                <Store className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <Store className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Easy Store Setup</h3>
               <p className="text-muted-foreground">
@@ -85,9 +84,9 @@ const Landing = () => {
               </p>
             </Card>
             
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-accent p-3 rounded-lg w-fit mb-4">
-                <Globe className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <Globe className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Shareable Store URL</h3>
               <p className="text-muted-foreground">
@@ -95,9 +94,9 @@ const Landing = () => {
               </p>
             </Card>
             
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-gradient-primary p-3 rounded-lg w-fit mb-4">
-                <Zap className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <Zap className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Real-time Updates</h3>
               <p className="text-muted-foreground">
@@ -105,9 +104,9 @@ const Landing = () => {
               </p>
             </Card>
             
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-gradient-secondary p-3 rounded-lg w-fit mb-4">
-                <TrendingUp className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <TrendingUp className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Track Performance</h3>
               <p className="text-muted-foreground">
@@ -115,9 +114,9 @@ const Landing = () => {
               </p>
             </Card>
             
-            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300">
-              <div className="bg-accent p-3 rounded-lg w-fit mb-4">
-                <Shield className="h-6 w-6 text-white" />
+            <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
+              <div className="bg-primary p-4 rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <Shield className="h-7 w-7 text-primary-foreground" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Secure & Reliable</h3>
               <p className="text-muted-foreground">
@@ -138,7 +137,7 @@ const Landing = () => {
           
           <div className="space-y-8">
             <div className="flex flex-col md:flex-row gap-6 items-center">
-              <div className="bg-gradient-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
+              <div className="bg-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
                 1
               </div>
               <Card className="flex-1 p-6 shadow-card">
@@ -150,7 +149,7 @@ const Landing = () => {
             </div>
             
             <div className="flex flex-col md:flex-row gap-6 items-center">
-              <div className="bg-gradient-secondary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
+              <div className="bg-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
                 2
               </div>
               <Card className="flex-1 p-6 shadow-card">
@@ -162,7 +161,7 @@ const Landing = () => {
             </div>
             
             <div className="flex flex-col md:flex-row gap-6 items-center">
-              <div className="bg-accent text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
+              <div className="bg-primary text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-glow">
                 3
               </div>
               <Card className="flex-1 p-6 shadow-card">
@@ -177,7 +176,7 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-primary relative overflow-hidden">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-secondary relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2YzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00em0tMTYgMGMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHptMzIgMzJjMC0yLjIxIDEuNzktNCA0LTRzNCAxLjc5IDQgNC0xLjc5IDQtNCA0LTQtMS43OS00LTR6bS0xNiAwYzAtMi4yMSAxLjc5LTQgNC00czQgMS43OSA0IDQtMS43OSA0LTQgNC00LTEuNzktNC00em0tMTYgMGMwLTIuMjEgMS43OS00IDQtNHM0IDEuNzkgNCA0LTEuNzkgNC00IDQtNC0xLjc5LTQtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
         
         <div className="relative max-w-4xl mx-auto text-center text-white">
@@ -188,7 +187,7 @@ const Landing = () => {
             Join thousands of sellers already growing their business online
           </p>
           <Link to="/auth/register">
-            <Button size="lg" variant="accent" className="text-lg px-8">
+            <Button size="lg" className="text-lg px-8 bg-primary hover:bg-primary-glow text-primary-foreground">
               Get Started for Free
             </Button>
           </Link>
