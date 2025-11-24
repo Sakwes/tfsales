@@ -29,10 +29,10 @@ const Register = () => {
       return;
     }
     
-    if (pin.length !== 4 || confirmPin.length !== 4) {
+    if (pin.length !== 6 || confirmPin.length !== 6) {
       toast({
         title: "Invalid PIN",
-        description: "PIN must be exactly 4 digits",
+        description: "PIN must be exactly 6 digits",
         variant: "destructive",
       });
       return;
@@ -106,14 +106,14 @@ const Register = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="pin">Choose 4-Digit PIN</Label>
+              <Label htmlFor="pin">Choose 6-Digit PIN</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="pin"
                   type="password"
-                  placeholder="••••"
-                  maxLength={4}
+                  placeholder="••••••"
+                  maxLength={6}
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                   className="pl-10"
@@ -129,8 +129,8 @@ const Register = () => {
                 <Input
                   id="confirmPin"
                   type="password"
-                  placeholder="••••"
-                  maxLength={4}
+                  placeholder="••••••"
+                  maxLength={6}
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
                   className="pl-10"
