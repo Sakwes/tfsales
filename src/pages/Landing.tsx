@@ -90,7 +90,7 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-semibold mb-2">Shareable Store URL</h3>
               <p className="text-muted-foreground">
-                Get your unique store link (sellerapp.com/yourstore) to share on WhatsApp, Facebook, and Instagram.
+                Get your unique store link ({import.meta.env.VITE_STORE_URL}/yourstore) to share on WhatsApp, Facebook, and Instagram.
               </p>
             </Card>
             
@@ -199,7 +199,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
             <Store className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold">SellerApp</span>
+            <span className="text-xl font-bold">Tech fusion Solutions</span>
           </div>
           <p className="text-muted-foreground mb-4">
             Empowering sellers to build their online presence

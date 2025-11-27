@@ -52,7 +52,7 @@ const Login = () => {
     
     toast({
       title: "Login Successful!",
-      description: "Welcome back to SellerApp",
+      description: "Welcome back to Tech fusion Solutions",
     });
     
     navigate("/seller/dashboard");
@@ -86,7 +86,7 @@ const Login = () => {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+234xxxxxxxxxx"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="pl-10"

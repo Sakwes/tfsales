@@ -83,7 +83,7 @@ const Dashboard = () => {
   };
 
   const copyStoreUrl = () => {
-    const url = `https://sellerapp.com/${store?.store_name?.toLowerCase().replace(/\s+/g, '-')}`;
+    const url = `${import.meta.env.VITE_STORE_URL}/${store?.store_name?.toLowerCase().replace(/\s+/g, '-')}`;
     navigator.clipboard.writeText(url);
     toast({
       title: "URL Copied!",
@@ -310,9 +310,9 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold mb-4">Your Store URL</h2>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm">
-              https://sellerapp.com/{store.store_name.toLowerCase().replace(/\s+/g, '-')}
+              {import.meta.env.VITE_STORE_URL}/{store.store_name.toLowerCase().replace(/\s+/g, '-')}
             </div>
-            <Button 
+            <Button
               variant="accent" 
               onClick={copyStoreUrl}
               className="sm:w-auto"

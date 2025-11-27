@@ -62,7 +62,7 @@ const Register = () => {
     
     toast({
       title: "Account Created!",
-      description: "Welcome to SellerApp",
+      description: "Welcome to Tech fusion Solutions",
     });
     
     navigate("/seller/onboarding");
@@ -96,7 +96,7 @@ const Register = () => {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+234xxxxxxxxxx"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="pl-10"

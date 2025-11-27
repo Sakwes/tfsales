@@ -125,7 +125,7 @@ const Onboarding = () => {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                This will be part of your store URL: sellerapp.com/{storeName.toLowerCase().replace(/\s+/g, '-')}
+                This will be part of your store URL: {import.meta.env.VITE_STORE_URL}/{storeName.toLowerCase().replace(/\s+/g, '-')}
               </p>
             </div>
             
@@ -136,7 +136,7 @@ const Onboarding = () => {
                 <Input
                   id="contactPhone"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+234xxxxxxxxxx"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   className="pl-10"
@@ -151,18 +151,18 @@ const Onboarding = () => {
             <Card className="p-6 bg-muted/50">
               <h3 className="font-semibold mb-2">Terms and Conditions</h3>
               <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
-                <p>By creating a store on SellerApp, you agree to:</p>
+                <p>By creating a store on Tech fusion Solutions, you agree to:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Sell only legal products and services</li>
                   <li>Provide accurate product descriptions and pricing</li>
                   <li>Respond to customer inquiries in a timely manner</li>
                   <li>Not engage in fraudulent or misleading activities</li>
                   <li>Comply with all applicable laws and regulations</li>
-                  <li>Allow SellerApp to display your store publicly</li>
+                  <li>Allow Tech fusion Solutions to display your store publicly</li>
                   <li>Pay any applicable fees or commissions</li>
                 </ul>
                 <p className="mt-2">
-                  SellerApp reserves the right to deactivate stores that violate these terms.
+                  Tech fusion Solutions reserves the right to deactivate stores that violate these terms.
                 </p>
               </div>
               
