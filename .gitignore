@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 */.temp
+
+.env
+.env.local
+.env.*.local
