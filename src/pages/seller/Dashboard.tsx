@@ -267,7 +267,9 @@ const Dashboard = () => {
     await signOut();
   };
 
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleDescriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     // Limit to 200 words
     const words = e.target.value.split(" ");
     if (words.length > 200) {
@@ -516,7 +518,10 @@ const Dashboard = () => {
                     required
                   />
                   <p className="text-xs text-muted-foreground text-right">
-                    {productDescription.split(" ").length}/200 words
+                    {productDescription.length === 0
+                      ? 0
+                      : productDescription.split(" ").length}
+                    /200 words
                   </p>
                 </div>
 
