@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Store, ArrowLeft, Phone, Lock } from "lucide-react";
+import { ArrowLeft, Phone, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import logo from "@/assets/logo.png";
 
 const Register = () => {
   const [phone, setPhone] = useState("");
@@ -19,75 +20,79 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (phone.length < 10) {
       toast({
         title: "Invalid Phone Number",
         description: "Please enter a valid phone number",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     if (pin.length !== 6 || confirmPin.length !== 6) {
       toast({
         title: "Invalid PIN",
         description: "PIN must be exactly 6 digits",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     if (pin !== confirmPin) {
       toast({
         title: "PINs Don't Match",
         description: "Please make sure both PINs are the same",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     setLoading(true);
     const { error } = await signUp(phone, pin);
     setLoading(false);
-    
+
     if (error) {
       toast({
         title: "Registration Failed",
         description: error.message || "Could not create account",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     toast({
       title: "Account Created!",
-      description: "Welcome to Tech fusion Solutions",
+      description: "Welcome to Tech fusion Solutions"
     });
-    
+
     navigate("/seller/onboarding");
   };
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
+        <Link
+          to="/"
+          className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Link>
-        
+
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
-            <div className="bg-gradient-primary p-3 rounded-xl">
-              <Store className="h-8 w-8 text-white" />
+            <div className="bg-white p-3 rounded-xl">
+              <img src={logo} className="h-8 w-8 text-white" alt="" />
             </div>
           </div>
-          
-          <h1 className="text-2xl font-bold text-center mb-2">Create Seller Account</h1>
+
+          <h1 className="text-2xl font-bold text-center mb-2">
+            Create An Account
+          </h1>
           <p className="text-muted-foreground text-center mb-6">
             Enter your phone number to get started
           </p>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
@@ -98,13 +103,13 @@ const Register = () => {
                   type="tel"
                   placeholder="+234xxxxxxxxxx"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={e => setPhone(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="pin">Choose 6-Digit PIN</Label>
               <div className="relative">
@@ -115,13 +120,13 @@ const Register = () => {
                   placeholder="••••••"
                   maxLength={6}
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                  onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
                   className="pl-10"
                   required
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPin">Confirm PIN</Label>
               <div className="relative">
@@ -132,20 +137,29 @@ const Register = () => {
                   placeholder="••••••"
                   maxLength={6}
                   value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                  onChange={e =>
+                    setConfirmPin(e.target.value.replace(/\D/g, ""))
+                  }
                   className="pl-10"
                   required
                 />
               </div>
             </div>
-            
-            <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+
+            <Button
+              type="submit"
+              variant="hero"
+              className="w-full"
+              size="lg"
+              disabled={loading}>
               {loading ? "Creating Account..." : "Create Account"}
             </Button>
-            
+
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/auth/login" className="text-primary hover:underline font-medium">
+              <Link
+                to="/auth/login"
+                className="text-primary hover:underline font-medium">
                 Login here
               </Link>
             </p>

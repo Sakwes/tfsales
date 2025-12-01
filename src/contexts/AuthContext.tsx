@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (phone: string, pin: string) => {
-    const email = `${phone.replace(/\D/g, '')}@techfusionsolutions.temp`;
+    const email = `${phone.replace(/\D/g, '')}@tfsolutions.com.ng`;
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (phone: string, pin: string) => {
-    const email = `${phone.replace(/\D/g, '')}@techfusionsolutions.temp`;
+    const email = `${phone.replace(/\D/g, '')}@tfsolutions.com.ng`;
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email,

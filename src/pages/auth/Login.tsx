@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Store, ArrowLeft, Phone, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import logo from "@/assets/logo.png";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
@@ -68,12 +69,12 @@ const Login = () => {
         
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
-            <div className="bg-gradient-primary p-3 rounded-xl">
-              <Store className="h-8 w-8 text-white" />
+            <div className="bg-white p-3 rounded-xl">
+              <img src={logo} alt="TechFusion Logo" className="h-8 w-8" />
             </div>
           </div>
           
-          <h1 className="text-2xl font-bold text-center mb-2">Seller Login</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">Login</h1>
           <p className="text-muted-foreground text-center mb-6">
             Enter your credentials to access your store
           </p>
