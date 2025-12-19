@@ -9,6 +9,8 @@ import { AdminRoute } from "./components/AdminRoute";
 import Landing from "./pages/Landing";
 import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Onboarding from "./pages/seller/Onboarding";
 import Dashboard from "./pages/seller/Dashboard";
 import StoreFront from "./pages/store/StoreFront";
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/seller/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
