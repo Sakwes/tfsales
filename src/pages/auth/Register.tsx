@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Phone, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 
 const Register = () => {
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -21,35 +21,35 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (phone.length < 10) {
+    if (!email || !email.includes("@")) {
       toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
     }
 
-    if (pin.length !== 6 || confirmPin.length !== 6) {
+    if (password.length < 6) {
       toast({
-        title: "Invalid PIN",
-        description: "PIN must be exactly 6 digits",
+        title: "Invalid Password",
+        description: "Password must be at least 6 characters",
         variant: "destructive"
       });
       return;
     }
 
-    if (pin !== confirmPin) {
+    if (password !== confirmPassword) {
       toast({
-        title: "PINs Don't Match",
-        description: "Please make sure both PINs are the same",
+        title: "Passwords Don't Match",
+        description: "Please make sure both passwords are the same",
         variant: "destructive"
       });
       return;
     }
 
     setLoading(true);
-    const { error } = await signUp(phone, pin);
+    const { error } = await signUp(email, password);
     setLoading(false);
 
     if (error) {
@@ -62,11 +62,11 @@ const Register = () => {
     }
 
     toast({
-      title: "Account Created!",
-      description: "Welcome to Tech fusion Solutions"
+      title: "Check Your Email!",
+      description: "We've sent you a confirmation link to verify your account"
     });
 
-    navigate("/seller/onboarding");
+    navigate("/auth/login");
   };
 
   return (
@@ -82,7 +82,7 @@ const Register = () => {
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} className="h-8 w-8 text-white" alt="" />
+              <img src={logo} className="h-8 w-8" alt="TechFusion Logo" />
             </div>
           </div>
 
@@ -90,20 +90,20 @@ const Register = () => {
             Create An Account
           </h1>
           <p className="text-muted-foreground text-center mb-6">
-            Enter your phone number to get started
+            Enter your email to get started
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="email">Email Address</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+234xxxxxxxxxx"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -111,35 +111,34 @@ const Register = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pin">Choose 6-Digit PIN</Label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="pin"
+                  id="password"
                   type="password"
-                  placeholder="••••••"
-                  maxLength={6}
-                  value={pin}
-                  onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Must be at least 6 characters
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPin">Confirm PIN</Label>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="confirmPin"
+                  id="confirmPassword"
                   type="password"
-                  placeholder="••••••"
-                  maxLength={6}
-                  value={confirmPin}
-                  onChange={e =>
-                    setConfirmPin(e.target.value.replace(/\D/g, ""))
-                  }
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
                   className="pl-10"
                   required
                 />

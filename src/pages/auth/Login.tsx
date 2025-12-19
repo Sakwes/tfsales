@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Store, ArrowLeft, Phone, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 
 const Login = () => {
-  const [phone, setPhone] = useState("");
-  const [pin, setPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -20,32 +20,32 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (phone.length < 10) {
+    if (!email || !email.includes("@")) {
       toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
         variant: "destructive",
       });
       return;
     }
     
-    if (pin.length !== 6) {
+    if (password.length < 6) {
       toast({
-        title: "Invalid PIN",
-        description: "PIN must be exactly 6 digits",
+        title: "Invalid Password",
+        description: "Password must be at least 6 characters",
         variant: "destructive",
       });
       return;
     }
     
     setLoading(true);
-    const { error } = await signIn(phone, pin);
+    const { error } = await signIn(email, password);
     setLoading(false);
     
     if (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid phone number or PIN",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
       return;
@@ -53,7 +53,7 @@ const Login = () => {
     
     toast({
       title: "Login Successful!",
-      description: "Welcome back to Tech fusion Solutions",
+      description: "Welcome back to Tech Fusion Solutions",
     });
     
     navigate("/seller/dashboard");
@@ -81,15 +81,15 @@ const Login = () => {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="email">Email Address</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+234xxxxxxxxxx"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
                 />
@@ -97,16 +97,23 @@ const Login = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="pin">6-Digit PIN</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link 
+                  to="/auth/forgot-password" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="pin"
+                  id="password"
                   type="password"
-                  placeholder="••••••"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
                   required
                 />
