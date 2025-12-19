@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Store, Phone, MessageCircle, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 interface Product {
   id: string;
@@ -27,6 +28,19 @@ const StoreFront = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // Dynamic meta tags for social sharing
+  useMetaTags({
+    title: store ? `${store.store_name} - Shop Now` : "Loading Store...",
+    description: store
+      ? `Browse products at ${store.store_name}. Contact us on WhatsApp: ${store.contact_phone}`
+      : "Loading store details...",
+    image: store?.products?.[0]?.images?.[0] || "/logo.png",
+    url: `${import.meta.env.VITE_STORE_URL || window.location.origin}/store/${storeName}`,
+    type: "website",
+    phone: store?.contact_phone,
+    storeName: store?.store_name
+  });
 
   useEffect(() => {
     loadStore();
