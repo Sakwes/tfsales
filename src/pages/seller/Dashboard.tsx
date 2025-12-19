@@ -13,7 +13,9 @@ import {
   ExternalLink,
   Copy,
   Package,
-  X
+  X,
+  Mail,
+  Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -94,7 +96,7 @@ const Dashboard = () => {
   };
 
   const copyStoreUrl = () => {
-    const url = `${import.meta.env.VITE_STORE_URL}/${store?.store_name
+    const url = `${import.meta.env.VITE_STORE_URL}/store/${store?.store_name
       ?.toLowerCase()
       .replace(/\s+/g, "-")}`;
     navigator.clipboard.writeText(url);
@@ -310,15 +312,21 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* <div className="bg-gradient-primary p-2 rounded-lg">
-                <Store className="h-6 w-6 text-white" />
-              </div> */}
               <div className="bg-white p-3 rounded-xl">
                 <img src={logo} className="h-8 w-8 text-white" alt="" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">{store.store_name}</h1>
-                <p className="text-sm text-muted-foreground">My Dashboard</p>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {user?.email}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {store.contact_phone}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -332,13 +340,24 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Store URL Card */}
         <Card className="p-6 mb-8 shadow-card bg-gradient-primary text-white">
-          <h2 className="text-lg font-semibold">Your Store URL</h2>
-          <p className="text-xs text-white font-medium mb-4">
-            Share your store with customers using the link below.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Your Store URL</h2>
+              <p className="text-xs text-white/80 font-medium">
+                Share your store with customers using the link below.
+              </p>
+            </div>
+            <div className="text-right text-xs text-white/70">
+              <p className="font-medium">{store.store_name}</p>
+              <p className="flex items-center gap-1 justify-end">
+                <Phone className="h-3 w-3" />
+                {store.contact_phone}
+              </p>
+            </div>
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm">
-              {import.meta.env.VITE_STORE_URL}/
+            <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm break-all">
+              {import.meta.env.VITE_STORE_URL}/store/
               {store.store_name.toLowerCase().replace(/\s+/g, "-")}
             </div>
             <Button
@@ -361,6 +380,9 @@ const Dashboard = () => {
               </Button>
             </Link>
           </div>
+          <p className="text-xs text-white/60 mt-3 text-center sm:text-left">
+            When shared on social media, your store will show your name and contact info for better engagement.
+          </p>
         </Card>
 
         {/* Products Header */}
