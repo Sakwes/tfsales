@@ -99,12 +99,7 @@ const Login = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link 
-                  to="/auth/forgot-password" 
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
+                
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -118,6 +113,15 @@ const Login = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Link 
+                  to="/auth/forgot-password" 
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
             </div>
             
             <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>

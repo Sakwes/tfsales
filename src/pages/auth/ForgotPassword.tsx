@@ -18,33 +18,33 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes("@")) {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     setLoading(true);
     const { error } = await resetPassword(email);
     setLoading(false);
-    
+
     if (error) {
       toast({
         title: "Error",
         description: error.message || "Could not send reset email",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
+
     setEmailSent(true);
     toast({
       title: "Email Sent!",
-      description: "Check your inbox for password reset instructions",
+      description: "Check your inbox for password reset instructions"
     });
   };
 
@@ -58,26 +58,27 @@ const ForgotPassword = () => {
                 <CheckCircle className="h-12 w-12 text-primary" />
               </div>
             </div>
-            
+
             <h1 className="text-2xl font-bold mb-2">Check Your Email</h1>
             <p className="text-muted-foreground mb-6">
               We've sent password reset instructions to <strong>{email}</strong>
             </p>
-            
+
             <div className="space-y-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
-                onClick={() => setEmailSent(false)}
-              >
+                onClick={() => setEmailSent(false)}>
                 Try a different email
               </Button>
-              
-              <Link to="/auth/login">
-                <Button variant="hero" className="w-full">
-                  Back to Login
-                </Button>
-              </Link>
+
+              <div>
+                <Link to="/auth/login">
+                  <Button variant="hero" className="w-full">
+                    Back to Login
+                  </Button>
+                </Link>
+              </div>
             </div>
           </Card>
         </div>
@@ -88,23 +89,27 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/auth/login" className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
+        <Link
+          to="/auth/login"
+          className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Login
         </Link>
-        
+
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
             <div className="bg-white p-3 rounded-xl">
               <img src={logo} alt="TechFusion Logo" className="h-8 w-8" />
             </div>
           </div>
-          
-          <h1 className="text-2xl font-bold text-center mb-2">Forgot Password?</h1>
+
+          <h1 className="text-2xl font-bold text-center mb-2">
+            Forgot Password?
+          </h1>
           <p className="text-muted-foreground text-center mb-6">
             Enter your email and we'll send you reset instructions
           </p>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
@@ -115,20 +120,27 @@ const ForgotPassword = () => {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
             </div>
-            
-            <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+
+            <Button
+              type="submit"
+              variant="hero"
+              className="w-full"
+              size="lg"
+              disabled={loading}>
               {loading ? "Sending..." : "Send Reset Link"}
             </Button>
-            
+
             <p className="text-sm text-center text-muted-foreground">
               Remember your password?{" "}
-              <Link to="/auth/login" className="text-primary hover:underline font-medium">
+              <Link
+                to="/auth/login"
+                className="text-primary hover:underline font-medium">
                 Login here
               </Link>
             </p>
