@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      product_views: {
+        Row: {
+          id: string
+          ip_address: unknown
+          product_id: string
+          store_id: string
+          user_agent: string | null
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          ip_address?: unknown
+          product_id: string
+          store_id: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          ip_address?: unknown
+          product_id?: string
+          store_id?: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_views_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_views_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string
@@ -58,16 +100,19 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           id: string
           phone: string
         }
         Insert: {
           created_at?: string
+          email?: string | null
           id: string
           phone: string
         }
         Update: {
           created_at?: string
+          email?: string | null
           id?: string
           phone?: string
         }

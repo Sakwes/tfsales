@@ -15,13 +15,15 @@ import {
   Package,
   X,
   Mail,
-  Phone
+  Phone,
+  BarChart3,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 import { formatCurrency } from "@/lib/utils";
+import { RoleSwitcher } from "@/components/RoleSwitcher";
 
 interface Product {
   id: string;
@@ -330,9 +332,18 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/seller/analytics">
+                <Button variant="outline" size="sm">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Analytics
+                </Button>
+              </Link>
+              <RoleSwitcher />
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
