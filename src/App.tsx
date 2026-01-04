@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Onboarding from "./pages/seller/Onboarding";
 import Dashboard from "./pages/seller/Dashboard";
+import Analytics from "./pages/seller/Analytics";
 import StoreFront from "./pages/store/StoreFront";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,11 @@ const App = () => (
             <Route path="/seller/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/analytics" element={
+              <ProtectedRoute>
+                <Analytics />
               </ProtectedRoute>
             } />
             <Route path="/store/:storeName" element={<StoreFront />} />

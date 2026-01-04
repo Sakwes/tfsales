@@ -90,6 +90,18 @@ const StoreFront = () => {
     window.open(`https://wa.me/${phone}`, "_blank");
   };
 
+  const handleProductClick = async (product: Product) => {
+    setSelectedProduct(product);
+    
+    // Track product view
+    if (store) {
+      await supabase.from("product_views").insert({
+        product_id: product.id,
+        store_id: store.id
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -165,7 +177,7 @@ const StoreFront = () => {
               <Card
                 key={product.id}
                 className="overflow-hidden shadow-card hover:shadow-glow transition-all cursor-pointer"
-                onClick={() => setSelectedProduct(product)}>
+                onClick={() => handleProductClick(product)}>
                 <div className="aspect-square bg-muted flex items-center justify-center">
                   {product.images.length > 0 ? (
                     <img
