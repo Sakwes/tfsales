@@ -30,7 +30,8 @@ import { useToast } from "@/hooks/use-toast";
 interface Seller {
   id: string;
   store_id: string;
-  phone: string;
+  contact_phone: string;
+  email: string;
   store_name: string;
   is_active: boolean;
   products_count: number;
@@ -51,46 +52,72 @@ const AdminDashboard = () => {
   const loadSellers = async () => {
     setLoading(true);
     
-    // Get all stores with seller info
-    const { data: stores } = await supabase
-      .from('stores')
-      .select(`
-        id,
-        seller_id,
-        store_name,
-        is_active,
-        created_at,
-        profiles!inner(phone)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (!stores) {
+    try {
+      // Get stores with contact_phone and join with profiles for email
+      const { data: stores, error: storesError } = await supabase
+        .from('stores')
+        .select(`
+          id,
+          seller_id,
+          store_name,
+          contact_phone,
+          is_active,
+          created_at,
+          profiles:seller_id(email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (storesError) {
+        console.error("Error fetching stores:", storesError);
+        toast({
+          title: "Error",
+          description: "Could not load sellers data",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      console.log("The stores data:", stores);
+      
+      if (!stores || stores.length === 0) {
+        setSellers([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Get product counts for each store
+      const sellersData = await Promise.all(
+        stores.map(async (store: any) => {
+          const { count } = await supabase
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('store_id', store.id);
+          
+          return {
+            id: store.seller_id,
+            store_id: store.id,
+            contact_phone: store.contact_phone || 'N/A',
+            email: store.profiles?.email || 'No email',
+            store_name: store.store_name,
+            is_active: store.is_active,
+            products_count: count || 0,
+            created_at: store.created_at,
+          };
+        })
+      );
+      
+      setSellers(sellersData);
+    } catch (error) {
+      console.error("Error loading sellers:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-      return;
     }
-    
-    // Get product counts for each store
-    const sellersData = await Promise.all(
-      stores.map(async (store: any) => {
-        const { count } = await supabase
-          .from('products')
-          .select('*', { count: 'exact', head: true })
-          .eq('store_id', store.id);
-        
-        return {
-          id: store.seller_id,
-          store_id: store.id,
-          phone: store.profiles.phone,
-          store_name: store.store_name,
-          is_active: store.is_active,
-          products_count: count || 0,
-          created_at: store.created_at,
-        };
-      })
-    );
-    
-    setSellers(sellersData);
-    setLoading(false);
   };
 
   const toggleStoreStatus = async (storeId: string, currentStatus: boolean) => {
@@ -119,7 +146,8 @@ const AdminDashboard = () => {
   const filteredSellers = sellers.filter(
     seller => 
       seller.store_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.phone.includes(searchQuery)
+      seller.contact_phone.includes(searchQuery) ||
+      seller.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalSellers = sellers.length;
@@ -206,10 +234,10 @@ const AdminDashboard = () => {
                 </p>
               </div>
               
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="relative w-full sm:w-64 h-fit">
+                <Search className="absolute left-3 top-0 bottom-0 my-auto h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or phone..."
+                  placeholder="Search by name, email or phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -223,7 +251,8 @@ const AdminDashboard = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Store Name</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Contact Phone</TableHead>
                   <TableHead>Products</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
@@ -233,19 +262,20 @@ const AdminDashboard = () => {
               <TableBody>
                 {filteredSellers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No sellers found
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {sellers.length === 0 ? "No sellers yet. They will appear here once stores are created." : "No sellers found"}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredSellers.map((seller) => (
                     <TableRow key={seller.id}>
                       <TableCell className="font-medium">{seller.store_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{seller.phone}</TableCell>
+                      <TableCell className="text-sm">{seller.email}</TableCell>
+                      <TableCell className="font-mono text-sm">{seller.contact_phone}</TableCell>
                       <TableCell>{seller.products_count}</TableCell>
                       <TableCell>
                         {seller.is_active ? (
-                          <Badge variant="secondary" className="bg-secondary/20 text-secondary">
+                          <Badge variant="secondary" className="bg-green-500/20 text-green-500">
                             <CheckCircle className="mr-1 h-3 w-3" />
                             Active
                           </Badge>
@@ -269,6 +299,7 @@ const AdminDashboard = () => {
                           <Button 
                             size="sm" 
                             variant={seller.is_active ? "destructive" : "secondary"}
+                            className={seller.is_active ? "" : "bg-green-500"}
                             onClick={() => toggleStoreStatus(seller.store_id, seller.is_active)}
                           >
                             {seller.is_active ? (
