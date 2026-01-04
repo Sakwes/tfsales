@@ -7,7 +7,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
 import {
   BarChart3,
@@ -16,11 +16,12 @@ import {
   Package,
   ArrowLeft,
   Calendar,
-  MousePointerClick,
+  MousePointerClick
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import CustomLineChart from "@/components/graphs/CustomLineChart";
 
 interface DailyVisits {
   date: string;
@@ -37,10 +38,19 @@ const Analytics = () => {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [dateRange, setDateRange] = useState("7"); // days
   const [totalVisits, setTotalVisits] = useState(0);
   const [totalProductViews, setTotalProductViews] = useState(0);
-  const [dailyVisits, setDailyVisits] = useState<DailyVisits[]>([]);
+  // In your component state, add:
+  const [dailyStats, setDailyStats] = useState<
+    Array<{
+      label: string;
+      date: string;
+      visits: number;
+      views: number;
+    }>
+  >([]);
   const [topProducts, setTopProducts] = useState<ProductView[]>([]);
   const { user } = useAuth();
 
@@ -71,6 +81,7 @@ const Analytics = () => {
   };
 
   const loadAnalytics = async () => {
+    setLoadingAnalytics(true);
     if (!storeId) return;
 
     const daysAgo = parseInt(dateRange);
@@ -97,7 +108,7 @@ const Analytics = () => {
 
     setTotalProductViews(productViewsCount || 0);
 
-    // Get daily visits breakdown
+    // Get daily data for both visits and product views
     const { data: visitsData } = await supabase
       .from("store_visitors")
       .select("visited_at")
@@ -105,21 +116,46 @@ const Analytics = () => {
       .gte("visited_at", startDate.toISOString())
       .lte("visited_at", endDate.toISOString());
 
-    // Group by day
-    const dailyMap = new Map<string, number>();
+    const { data: productViewsData } = await supabase
+      .from("product_views")
+      .select("viewed_at")
+      .eq("store_id", storeId)
+      .gte("viewed_at", startDate.toISOString())
+      .lte("viewed_at", endDate.toISOString());
+
+    // / Initialize daily map with all dates in range
+    const dailyMap = new Map<string, { visits: number; views: number }>();
     for (let i = daysAgo; i >= 0; i--) {
       const day = format(subDays(new Date(), i), "yyyy-MM-dd");
-      dailyMap.set(day, 0);
+      dailyMap.set(day, { visits: 0, views: 0 });
     }
 
-    visitsData?.forEach((visit) => {
+    // Count visits per day
+    visitsData?.forEach(visit => {
       const day = format(new Date(visit.visited_at), "yyyy-MM-dd");
-      dailyMap.set(day, (dailyMap.get(day) || 0) + 1);
+      const existing = dailyMap.get(day);
+      if (existing) {
+        dailyMap.set(day, { ...existing, visits: existing.visits + 1 });
+      }
     });
 
-    setDailyVisits(
-      Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }))
-    );
+    // Count product views per day
+    productViewsData?.forEach(view => {
+      const day = format(new Date(view.viewed_at), "yyyy-MM-dd");
+      const existing = dailyMap.get(day);
+      if (existing) {
+        dailyMap.set(day, { ...existing, views: existing.views + 1 });
+      }
+    });
+
+    const chartData = Array.from(dailyMap.entries()).map(([date, stats]) => ({
+      label: format(new Date(date), "MMM dd"),
+      date: date,
+      visits: stats.visits,
+      views: stats.views
+    }));
+
+    setDailyStats(chartData);
 
     // Get top viewed products
     const { data: products } = await supabase
@@ -129,7 +165,7 @@ const Analytics = () => {
 
     if (products) {
       const productViews = await Promise.all(
-        products.map(async (product) => {
+        products.map(async product => {
           const { count } = await supabase
             .from("product_views")
             .select("*", { count: "exact", head: true })
@@ -140,7 +176,7 @@ const Analytics = () => {
           return {
             product_id: product.id,
             product_name: product.name,
-            view_count: count || 0,
+            view_count: count || 0
           };
         })
       );
@@ -149,9 +185,10 @@ const Analytics = () => {
         productViews.sort((a, b) => b.view_count - a.view_count).slice(0, 5)
       );
     }
+    setLoadingAnalytics(false);
   };
 
-  if (loading) {
+  if (loading || loadingAnalytics) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -176,7 +213,7 @@ const Analytics = () => {
     );
   }
 
-  const maxVisits = Math.max(...dailyVisits.map((d) => d.count), 1);
+  const maxVisits = Math.max(...dailyStats.map(day => day.visits), 1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -220,7 +257,9 @@ const Analytics = () => {
               <div className="bg-primary/10 p-2 rounded-lg">
                 <Eye className="h-6 w-6 text-primary" />
               </div>
-              <span className="text-sm text-muted-foreground">Store Visits</span>
+              <span className="text-sm text-muted-foreground">
+                Store Visits
+              </span>
             </div>
             <div className="text-3xl font-bold">{totalVisits}</div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -233,7 +272,9 @@ const Analytics = () => {
               <div className="bg-secondary/10 p-2 rounded-lg">
                 <MousePointerClick className="h-6 w-6 text-secondary" />
               </div>
-              <span className="text-sm text-muted-foreground">Product Views</span>
+              <span className="text-sm text-muted-foreground">
+                Product Views
+              </span>
             </div>
             <div className="text-3xl font-bold">{totalProductViews}</div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -254,7 +295,9 @@ const Analytics = () => {
                 : 0}
               %
             </div>
-            <p className="text-xs text-white/70 mt-1">Views per visit</p>
+            <p className="text-xs text-white/70 mt-1">
+              Product views per visit
+            </p>
           </Card>
         </div>
 
@@ -263,29 +306,17 @@ const Analytics = () => {
           <Card className="p-6 shadow-card">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Daily Store Visits
+              Store Visits
             </h3>
-            <div className="space-y-3">
-              {dailyVisits.map((day) => (
-                <div key={day.date} className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground w-24 shrink-0">
-                    {format(new Date(day.date), "MMM dd")}
-                  </span>
-                  <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-primary rounded-full transition-all duration-300"
-                      style={{
-                        width: `${(day.count / maxVisits) * 100}%`,
-                        minWidth: day.count > 0 ? "8px" : "0",
-                      }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium w-8 text-right">
-                    {day.count}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <CustomLineChart
+              chartData={dailyStats}
+              colorList={["#c7910a", "#050317"]}
+              dataKeys={["visits", "views"]}
+              lineNames={["Store Visits", "Product Views"]}
+              isMoney={false}
+              showHeading={true}
+              customClass="h-[300px]"
+            />
           </Card>
 
           {/* Top Products */}
@@ -304,8 +335,7 @@ const Analytics = () => {
                 {topProducts.map((product, index) => (
                   <div
                     key={product.product_id}
-                    className="flex items-center gap-3"
-                  >
+                    className="flex items-center gap-3">
                     <span
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                         index === 0
@@ -313,11 +343,12 @@ const Analytics = () => {
                           : index === 1
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-muted text-muted-foreground"
-                      }`}
-                    >
+                      }`}>
                       {index + 1}
                     </span>
-                    <span className="flex-1 truncate">{product.product_name}</span>
+                    <span className="flex-1 truncate">
+                      {product.product_name}
+                    </span>
                     <span className="text-sm font-medium text-muted-foreground">
                       {product.view_count} views
                     </span>

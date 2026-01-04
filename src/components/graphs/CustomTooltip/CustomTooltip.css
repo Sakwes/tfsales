@@ -1,0 +1,42 @@
+.custom-tooltip {
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid #eeeeee;
+}
+.custom-tooltip .heading {
+  color: #1a1b1d80;
+  font-size: 12px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.custom-tooltip .title {
+  font-weight: 600;
+}
+
+.custom-tooltip .data-info {
+  display: flex;
+  align-items: center;
+}
+.custom-tooltip .data-info .label-content {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.custom-tooltip .data-info .label-content .data-name {
+  color: #0d0d0d99;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  margin-right: 10px;
+}
+
+.custom-tooltip .data-info .label-content .data-value {
+  font-weight: 500;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1b1d;
+}

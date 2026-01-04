@@ -50,7 +50,7 @@ export function RoleSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 text-black">
           <LayoutDashboard className="h-4 w-4" />
           Switch View
           <ChevronDown className="h-3 w-3" />

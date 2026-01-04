@@ -17,6 +17,7 @@ import {
   Mail,
   Phone,
   BarChart3,
+  LogOut
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ const Dashboard = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   // Form state
   const [productName, setProductName] = useState("");
@@ -61,6 +63,7 @@ const Dashboard = () => {
   const maxImagesPerProduct = 3;
 
   useEffect(() => {
+    checkAdmin();
     loadStoreAndProducts();
   }, [user]);
 
@@ -95,6 +98,23 @@ const Dashboard = () => {
     }
 
     setLoading(false);
+  };
+
+  const checkAdmin = async () => {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (data) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
   };
 
   const copyStoreUrl = () => {
@@ -302,6 +322,14 @@ const Dashboard = () => {
           <Link to="/seller/onboarding">
             <Button variant="hero">Set Up Store</Button>
           </Link>
+
+          {isAdmin && (
+            <div>
+              <Link to="/admin" className="mt-4 inline-block">
+                <Button variant="outline">Go to Admin Dashboard</Button>
+              </Link>
+            </div>
+          )}
         </Card>
       </div>
     );
@@ -312,14 +340,14 @@ const Dashboard = () => {
       {/* Header */}
       <header className="bg-card border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-white p-3 rounded-xl">
+              <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
                 <img src={logo} className="h-8 w-8 text-white" alt="" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">{store.store_name}</h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                {/* <div className="flex flex-wrap items-center gap-1 md:gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Mail className="h-3 w-3" />
                     {user?.email}
@@ -328,20 +356,23 @@ const Dashboard = () => {
                     <Phone className="h-3 w-3" />
                     {store.contact_phone}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="w-full md:w-fit flex gap-2 justify-end md:gap-4 md:items-center">
               <Link to="/seller/analytics">
                 <Button variant="outline" size="sm">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Analytics
+                  <BarChart3 className="mr-0 h-4 w-4" />
+                  <span className="hidden md:flex">Analytics</span>
                 </Button>
               </Link>
               <RoleSwitcher />
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden md:flex">
                 Logout
+              </Button>
+              <Button variant="default" size="sm" onClick={handleLogout} className="md:hidden">
+                <LogOut className="mr-0 h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -358,8 +389,8 @@ const Dashboard = () => {
                 Share your store with customers using the link below.
               </p>
             </div>
-            <div className="text-right text-xs text-white/70">
-              <p className="font-medium">{store.store_name}</p>
+            <div className="text-right text-xs text-white">
+              {/* <p className="font-medium">{store.store_name}</p> */}
               <p className="flex items-center gap-1 justify-end">
                 <Phone className="h-3 w-3" />
                 {store.contact_phone}
@@ -392,7 +423,8 @@ const Dashboard = () => {
             </Link>
           </div>
           <p className="text-xs text-white/60 mt-3 text-center sm:text-left">
-            When shared on social media, your store will show your name and contact info for better engagement.
+            When shared on social media, your store will show your name and
+            contact info for better engagement.
           </p>
         </Card>
 
