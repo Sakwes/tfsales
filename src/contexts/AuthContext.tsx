@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/auth/login`;
+    const redirectUrl = `${import.meta.env.VITE_STORE_URL || window.location.origin}/auth/login`;
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/auth/reset-password`;
+    const redirectUrl = `${import.meta.env.VITE_STORE_URL || window.location.origin}/auth/reset-password`;
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
