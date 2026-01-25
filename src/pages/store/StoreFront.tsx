@@ -2,7 +2,15 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Store, Phone, MessageCircle, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Store,
+  Phone,
+  MessageCircle,
+  ShoppingBag,
+  ChevronLeft,
+  ChevronRight,
+  X
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useMetaTags } from "@/hooks/use-meta-tags";
@@ -106,7 +114,7 @@ const StoreFront = () => {
 
   const handleNextImage = () => {
     if (selectedProduct && selectedProduct.images.length > 0) {
-      setCurrentImageIndex((prev) =>
+      setCurrentImageIndex(prev =>
         prev === selectedProduct.images.length - 1 ? 0 : prev + 1
       );
     }
@@ -114,7 +122,7 @@ const StoreFront = () => {
 
   const handlePrevImage = () => {
     if (selectedProduct && selectedProduct.images.length > 0) {
-      setCurrentImageIndex((prev) =>
+      setCurrentImageIndex(prev =>
         prev === 0 ? selectedProduct.images.length - 1 : prev - 1
       );
     }
@@ -232,8 +240,16 @@ const StoreFront = () => {
             className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
             onClick={() => setSelectedProduct(null)}>
             <Card
-              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-3xl max-h-[90vh] overflow-y-auto relative"
               onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center p-6 pb-0">
+                <h2 className="text-2xl font-bold">Product Detail</h2>
+                <button
+                  className="!w-fit h-fit bg-black/90 backdrop-blur-sm p-1.5 rounded-full hover:opacity-50 md:hidden"
+                  onClick={handleContactSeller}>
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
               <div className="grid md:grid-cols-2 gap-6 p-6">
                 <div className="space-y-4">
                   <div className="relative aspect-square bg-muted rounded-lg flex items-center justify-center group">
@@ -249,19 +265,20 @@ const StoreFront = () => {
                             <Button
                               variant="secondary"
                               size="icon"
-                              className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 transition-opacity shadow-lg"
                               onClick={handlePrevImage}>
                               <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="secondary"
                               size="icon"
-                              className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 transition-opacity shadow-lg"
                               onClick={handleNextImage}>
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                              {currentImageIndex + 1} / {selectedProduct.images.length}
+                              {currentImageIndex + 1} /{" "}
+                              {selectedProduct.images.length}
                             </div>
                           </>
                         )}
