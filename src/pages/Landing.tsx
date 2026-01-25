@@ -253,7 +253,7 @@ const Landing = () => {
             <Link to="/privacy" className="hover:text-primary transition-colors">
               Privacy
             </Link>
-            <a href="#" className="hover:text-primary transition-colors">
+            <a href="/support" className="hover:text-primary transition-colors">
               Support
             </a>
           </div>

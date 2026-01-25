@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import TermsAndConditions from "./pages/legal/TermsAndConditions";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import Support from "./pages/legal/Support";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/store/:storeName" element={<StoreFront />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/support" element={<Support />} />
             <Route path="/admin" element={
               <AdminRoute>
                 <AdminDashboard />

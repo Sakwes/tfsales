@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ interface StoreData {
 }
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [store, setStore] = useState<StoreData | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -115,6 +116,7 @@ const Dashboard = () => {
 
     if (data) {
       setIsAdmin(true);
+      navigate("/admin")
     } else {
       setIsAdmin(false);
     }
@@ -407,7 +409,7 @@ const Dashboard = () => {
                   <span className="hidden md:flex">Analytics</span>
                 </Button>
               </Link>
-              <RoleSwitcher />
+              {/* <RoleSwitcher /> */}
               <Button
                 variant="ghost"
                 size="sm"

@@ -5,12 +5,28 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -37,7 +53,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { RoleSwitcher } from "@/components/RoleSwitcher";
+// import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import CustomLineChart from "@/components/graphs/CustomLineChart";
 
@@ -60,13 +76,44 @@ interface DailyStats {
   productViews: number;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  images: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("7");
+  const [dateRange, setDateRange] = useState<{
+    from: Date;
+    to: Date;
+  }>({
+    from: startOfDay(subDays(new Date(), 7)),
+    to: endOfDay(new Date())
+  });
+  const [tempDateRange, setTempDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ from: undefined, to: undefined });
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [platformTotalVisits, setPlatformTotalVisits] = useState(0);
   const [platformTotalProductViews, setPlatformTotalProductViews] = useState(0);
+  const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [sellerProducts, setSellerProducts] = useState<Product[]>([]);
+  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [sellerToToggle, setSellerToToggle] = useState<{
+    storeId: string;
+    storeName: string;
+    isActive: boolean;
+  } | null>(null);
   const { signOut } = useAuth();
   const { toast } = useToast();
 
@@ -75,10 +122,78 @@ const AdminDashboard = () => {
     loadPlatformStats();
   }, [dateRange]);
 
+  const getDateRangeLabel = () => {
+    return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`;
+  };
+
+  const getDisplayDays = () => {
+    const daysDiff = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.min(daysDiff, 14);
+  };
+
+  const handleDatePickerOpen = () => {
+    setTempDateRange({
+      from: dateRange.from,
+      to: dateRange.to
+    });
+    setIsDatePickerOpen(true);
+  };
+
+  const handleApplyDateRange = () => {
+    if (tempDateRange.from && tempDateRange.to) {
+      setDateRange({
+        from: startOfDay(tempDateRange.from),
+        to: endOfDay(tempDateRange.to)
+      });
+      setIsDatePickerOpen(false);
+    }
+  };
+
+  const handleCancelDateRange = () => {
+    setTempDateRange({ from: undefined, to: undefined });
+    setIsDatePickerOpen(false);
+  };
+
+  const handleViewSellerDetails = async (seller: Seller) => {
+    setSelectedSeller(seller);
+    setIsSellerModalOpen(true);
+    setLoadingProducts(true);
+
+    try {
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("id, name, description, price, images, created_at, updated_at")
+        .eq("store_id", seller.store_id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching products:", error);
+        toast({
+          title: "Error",
+          description: "Could not load seller products",
+          variant: "destructive"
+        });
+        setSellerProducts([]);
+      } else {
+        setSellerProducts(products || []);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setSellerProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleCloseSellerModal = () => {
+    setIsSellerModalOpen(false);
+    setSelectedSeller(null);
+    setSellerProducts([]);
+  };
+
   const loadPlatformStats = async () => {
-    const daysAgo = parseInt(dateRange);
-    const startDate = startOfDay(subDays(new Date(), daysAgo));
-    const endDate = endOfDay(new Date());
+    const startDate = dateRange.from;
+    const endDate = dateRange.to;
 
     // Get total platform visits
     const { count: visitsCount } = await supabase
@@ -113,11 +228,12 @@ const AdminDashboard = () => {
       .lte("viewed_at", endDate.toISOString());
 
     // Initialize daily map - show last 14 days max for clarity
-    const displayDays = Math.min(daysAgo, 14);
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const displayDays = Math.min(daysDiff, 14);
     const dailyMap = new Map<string, { visits: number; views: number }>();
 
-    for (let i = displayDays; i >= 0; i--) {
-      const day = format(subDays(new Date(), i), "yyyy-MM-dd");
+    for (let i = displayDays - 1; i >= 0; i--) {
+      const day = format(subDays(endDate, i), "yyyy-MM-dd");
       dailyMap.set(day, { visits: 0, views: 0 });
     }
 
@@ -163,9 +279,8 @@ const AdminDashboard = () => {
   const loadSellers = async () => {
     setLoading(true);
 
-    const daysAgo = parseInt(dateRange);
-    const startDate = startOfDay(subDays(new Date(), daysAgo));
-    const endDate = endOfDay(new Date());
+    const startDate = dateRange.from;
+    const endDate = dateRange.to;
 
     try {
       const { data: stores, error: storesError } = await supabase
@@ -249,11 +364,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleStoreStatus = async (storeId: string, currentStatus: boolean) => {
+  const handleToggleStoreStatus = (storeId: string, storeName: string, currentStatus: boolean) => {
+    setSellerToToggle({
+      storeId,
+      storeName,
+      isActive: currentStatus
+    });
+    setIsConfirmDialogOpen(true);
+  };
+
+  const confirmToggleStoreStatus = async () => {
+    if (!sellerToToggle) return;
+
     const { error } = await supabase
       .from("stores")
-      .update({ is_active: !currentStatus })
-      .eq("id", storeId);
+      .update({ is_active: !sellerToToggle.isActive })
+      .eq("id", sellerToToggle.storeId);
 
     if (error) {
       toast({
@@ -261,17 +387,26 @@ const AdminDashboard = () => {
         description: "Could not update store status",
         variant: "destructive"
       });
+      setIsConfirmDialogOpen(false);
+      setSellerToToggle(null);
       return;
     }
 
     toast({
-      title: currentStatus ? "Store Deactivated" : "Store Activated",
-      description: `Store has been ${
-        currentStatus ? "deactivated" : "activated"
+      title: sellerToToggle.isActive ? "Store Blocked" : "Store Unblocked",
+      description: `${sellerToToggle.storeName} has been ${
+        sellerToToggle.isActive ? "blocked" : "unblocked"
       } successfully`
     });
 
+    setIsConfirmDialogOpen(false);
+    setSellerToToggle(null);
     await loadSellers();
+  };
+
+  const cancelToggleStoreStatus = () => {
+    setIsConfirmDialogOpen(false);
+    setSellerToToggle(null);
   };
 
   const filteredSellers = sellers.filter(
@@ -314,7 +449,7 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <RoleSwitcher />
+              {/* <RoleSwitcher /> */}
               <Button
                 variant="outline"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20"
@@ -329,18 +464,88 @@ const AdminDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Date Range Filter */}
         <div className="flex justify-end mb-6">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-fit sm:w-[280px] justify-start text-left font-normal"
+                onClick={handleDatePickerOpen}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {format(dateRange.from, "MMM dd, yyyy")} - {format(dateRange.to, "MMM dd, yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="p-4 space-y-4">
+                <CalendarComponent
+                  initialFocus
+                  mode="range"
+                  defaultMonth={tempDateRange.from || dateRange.from}
+                  selected={{
+                    from: tempDateRange.from,
+                    to: tempDateRange.to
+                  }}
+                  onSelect={(range) => {
+                    // If both dates are already selected, reset and start fresh
+                    if (tempDateRange.from && tempDateRange.to) {
+                      setTempDateRange({
+                        from: range?.from,
+                        to: undefined
+                      });
+                    } else {
+                      setTempDateRange({
+                        from: range?.from,
+                        to: range?.to
+                      });
+                    }
+                  }}
+                  numberOfMonths={2}
+                  className="hidden sm:block"
+                />
+                <CalendarComponent
+                  initialFocus
+                  mode="range"
+                  defaultMonth={tempDateRange.from || dateRange.from}
+                  selected={{
+                    from: tempDateRange.from,
+                    to: tempDateRange.to
+                  }}
+                  onSelect={(range) => {
+                    // If both dates are already selected, reset and start fresh
+                    if (tempDateRange.from && tempDateRange.to) {
+                      setTempDateRange({
+                        from: range?.from,
+                        to: undefined
+                      });
+                    } else {
+                      setTempDateRange({
+                        from: range?.from,
+                        to: range?.to
+                      });
+                    }
+                  }}
+                  numberOfMonths={1}
+                  className="sm:hidden"
+                />
+                <div className="flex gap-2 pt-3 border-t">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCancelDateRange}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleApplyDateRange}
+                    disabled={!tempDateRange.from || !tempDateRange.to}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Stats Cards */}
@@ -368,7 +573,7 @@ const AdminDashboard = () => {
             </div>
             <div className="text-3xl font-bold mb-1">{platformTotalVisits}</div>
             <div className="text-sm text-muted-foreground">
-              Store Visits ({dateRange}d)
+              Store Visits
             </div>
           </Card>
 
@@ -380,7 +585,7 @@ const AdminDashboard = () => {
               {platformTotalProductViews}
             </div>
             <div className="text-sm text-white/80">
-              Product Views ({dateRange}d)
+              Product Views
             </div>
           </Card>
         </div>
@@ -389,7 +594,7 @@ const AdminDashboard = () => {
         <Card className="p-6 shadow-card mb-8">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            Platform Activity (Last {Math.min(parseInt(dateRange), 14)} days)
+            Platform Activity (Last {getDisplayDays()} days)
           </h3>
           <CustomLineChart
             chartData={dailyStats}
@@ -502,6 +707,13 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewSellerDetails(seller)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Link
                             to={`/store/${seller.store_name
                               .toLowerCase()
@@ -522,8 +734,9 @@ const AdminDashboard = () => {
                                 : "bg-green-500 hover:bg-green-600"
                             }
                             onClick={() =>
-                              toggleStoreStatus(
+                              handleToggleStoreStatus(
                                 seller.store_id,
+                                seller.store_name,
                                 seller.is_active
                               )
                             }>
@@ -543,6 +756,214 @@ const AdminDashboard = () => {
           </div>
         </Card>
       </main>
+
+      {/* Seller Details Modal */}
+      <Dialog open={isSellerModalOpen} onOpenChange={handleCloseSellerModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Seller Details</DialogTitle>
+            <DialogDescription>
+              View seller information and manage their store
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSeller && (
+            <div className="space-y-6">
+              {/* Seller Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Store className="h-4 w-4" />
+                    Store Information
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Store Name:</span>
+                      <p className="font-medium">{selectedSeller.store_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Email:</span>
+                      <p className="font-medium">{selectedSeller.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Contact Phone:</span>
+                      <p className="font-medium">{selectedSeller.contact_phone}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>
+                      <div className="mt-1">
+                        {selectedSeller.is_active ? (
+                          <Badge variant="secondary" className="bg-green-500/20 text-green-500">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            <Ban className="mr-1 h-3 w-3" />
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Analytics
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Total Products:</span>
+                      <p className="font-medium">{selectedSeller.products_count}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Store Visits:</span>
+                      <p className="font-medium">{selectedSeller.total_visits}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Product Views:</span>
+                      <p className="font-medium">{selectedSeller.total_product_views}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Joined:</span>
+                      <p className="font-medium">
+                        {new Date(selectedSeller.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Products Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Products ({sellerProducts.length})
+                  </h3>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={selectedSeller.is_active ? "destructive" : "default"}
+                      className={
+                        selectedSeller.is_active
+                          ? ""
+                          : "bg-green-500 hover:bg-green-600"
+                      }
+                      onClick={() => {
+                        handleToggleStoreStatus(
+                          selectedSeller.store_id,
+                          selectedSeller.store_name,
+                          selectedSeller.is_active
+                        );
+                        handleCloseSellerModal();
+                      }}
+                    >
+                      {selectedSeller.is_active ? (
+                        <>
+                          <Ban className="h-4 w-4 mr-2" />
+                          Block Store
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Unblock Store
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {loadingProducts ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : sellerProducts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No products found for this seller
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    {sellerProducts.map((product) => (
+                      <Card key={product.id} className="p-4">
+                        <div className="flex gap-3">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-20 h-20 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
+                              <Package className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium truncate">{product.name}</h4>
+                            {product.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                                {product.description}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-lg font-bold text-primary">
+                                ${Number(product.price).toFixed(2)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(product.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Block/Unblock */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {sellerToToggle?.isActive ? "Block Store" : "Unblock Store"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {sellerToToggle?.isActive ? (
+                <>
+                  Are you sure you want to block <strong>{sellerToToggle?.storeName}</strong>?
+                  This will prevent the store from being visible to customers and the seller from
+                  managing their products.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to unblock <strong>{sellerToToggle?.storeName}</strong>?
+                  This will make the store visible to customers again.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelToggleStoreStatus}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmToggleStoreStatus}
+              className={
+                sellerToToggle?.isActive
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-green-500 hover:bg-green-600"
+              }
+            >
+              {sellerToToggle?.isActive ? "Block Store" : "Unblock Store"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
