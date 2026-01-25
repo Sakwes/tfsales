@@ -247,12 +247,12 @@ const Landing = () => {
             Empowering sellers to build their online presence
           </p>
           <div className="flex justify-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-primary transition-colors">
+            <Link to="/terms" className="hover:text-primary transition-colors">
               Terms
-            </a>
-            <a href="#" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/privacy" className="hover:text-primary transition-colors">
               Privacy
-            </a>
+            </Link>
             <a href="#" className="hover:text-primary transition-colors">
               Support
             </a>

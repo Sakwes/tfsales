@@ -17,6 +17,8 @@ import Analytics from "./pages/seller/Analytics";
 import StoreFront from "./pages/store/StoreFront";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import TermsAndConditions from "./pages/legal/TermsAndConditions";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/store/:storeName" element={<StoreFront />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin" element={
               <AdminRoute>
                 <AdminDashboard />
