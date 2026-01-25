@@ -246,7 +246,7 @@ const StoreFront = () => {
                 <h2 className="text-2xl font-bold">Product Detail</h2>
                 <button
                   className="!w-fit h-fit bg-black/90 backdrop-blur-sm p-1.5 rounded-full hover:opacity-50 md:hidden"
-                  onClick={handleContactSeller}>
+                  onClick={() => setSelectedProduct(null)}>
                   <X className="h-4 w-4 text-white" />
                 </button>
               </div>
