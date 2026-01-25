@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -347,7 +347,14 @@ const StoreFront = () => {
       <footer className="bg-card border-t py-8 px-4 sm:px-6 lg:px-8 mt-12">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground">
           <p className="mb-2">Powered by Tech fusion Solutions</p>
-          <p className="text-sm">Create your own store in minutes</p>
+          <p className="text-sm">
+            To create your own store register{" "}
+            <Link
+              to={"/auth/register"}
+              className="text-primary hover:opacity-50 transition-opacity">
+              here
+            </Link>
+          </p>
         </div>
       </footer>
     </div>
