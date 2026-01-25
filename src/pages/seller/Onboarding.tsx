@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Store, Phone } from "lucide-react";
+import { Phone, LogOut, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,10 +19,9 @@ const Onboarding = () => {
   const [existingStore, setExistingStore] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   console.log("The user info is ", user);
-  
 
   useEffect(() => {
     async function checkStore() {
@@ -102,109 +101,151 @@ const Onboarding = () => {
     navigate("/seller/dashboard");
   };
 
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   return (
-    <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-      <div className="w-full max-w-2xl">
-        <Card className="p-8 shadow-card animate-fade-in">
-          <div className="flex items-center justify-center mb-6">
-            <div className="bg-white p-3 rounded-xl">
-              <img src={logo} className="h-8 w-8 text-white" alt="" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="h-fit w-full bg-card border-b shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
+                <img src={logo} className="h-8 w-8 text-white" alt="" />
+              </div>
+              <div></div>
+            </div>
+
+            <div className="w-full md:w-fit flex gap-2 justify-end md:gap-4 md:items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="hidden md:flex">
+                Logout
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="md:hidden">
+                <LogOut className="mr-0 h-4 w-4" />
+              </Button>
             </div>
           </div>
-
-          <h1 className="text-3xl font-bold text-center mb-2">
-            Set Up Your Store
-          </h1>
-          <p className="text-muted-foreground text-center mb-8">
-            Let's create your online storefront
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="storeName">Store Name *</Label>
-              <Input
-                id="storeName"
-                type="text"
-                placeholder="My Awesome Store"
-                value={storeName}
-                onChange={e => setStoreName(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                This will be part of your store URL:{" "}
-                {import.meta.env.VITE_STORE_URL}/
-                {storeName.toLowerCase().replace(/\s+/g, "-")}
-              </p>
+        </div>
+      </header>
+      <div className="flex-grow h-full p-4 flex items-center justify-center">
+        <div className="w-full max-w-2xl pb-10">
+          <Link
+            to="/seller/dashboard"
+            className="inline-flex items-center text-black mb-6 hover:opacity-50 transition-opacity mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Link>
+          <Card className="p-8 shadow-card animate-fade-in">
+            <div className="flex items-center justify-center mb-6">
+              <div className="bg-white p-3 rounded-xl">
+                <img src={logo} className="h-8 w-8 text-white" alt="" />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="contactPhone">Contact Phone Number *</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <h1 className="text-3xl font-bold text-center mb-2">
+              Set Up Your Store
+            </h1>
+            <p className="text-muted-foreground text-center mb-8">
+              Let's create your online storefront
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="storeName">Store Name *</Label>
                 <Input
-                  id="contactPhone"
-                  type="tel"
-                  placeholder="+234xxxxxxxxxx"
-                  value={contactPhone}
-                  onChange={e => setContactPhone(e.target.value)}
-                  className="pl-10"
+                  id="storeName"
+                  type="text"
+                  placeholder="My Awesome Store"
+                  value={storeName}
+                  onChange={e => setStoreName(e.target.value)}
                   required
                 />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Customers will use this to contact you
-              </p>
-            </div>
-
-            <Card className="p-6 bg-muted/50">
-              <h3 className="font-semibold mb-2">Terms and Conditions</h3>
-              <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
-                <p>
-                  By creating a store on Tech fusion Solutions, you agree to:
-                </p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Sell only legal products and services</li>
-                  <li>Provide accurate product descriptions and pricing</li>
-                  <li>Respond to customer inquiries in a timely manner</li>
-                  <li>Not engage in fraudulent or misleading activities</li>
-                  <li>Comply with all applicable laws and regulations</li>
-                  <li>
-                    Allow Tech fusion Solutions to display your store publicly
-                  </li>
-                  <li>Pay any applicable fees or commissions</li>
-                </ul>
-                <p className="mt-2">
-                  Tech fusion Solutions reserves the right to deactivate stores
-                  that violate these terms.
+                <p className="text-xs text-muted-foreground">
+                  This will be part of your store URL:{" "}
+                  {import.meta.env.VITE_STORE_URL}/
+                  {storeName.toLowerCase().replace(/\s+/g, "-")}
                 </p>
               </div>
 
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={termsAccepted}
-                  onCheckedChange={checked =>
-                    setTermsAccepted(checked as boolean)
-                  }
-                />
-                <label
-                  htmlFor="terms"
-                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  I have read and agree to the terms and conditions *
-                </label>
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone Number *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="contactPhone"
+                    type="tel"
+                    placeholder="+234xxxxxxxxxx"
+                    value={contactPhone}
+                    onChange={e => setContactPhone(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Customers will use this to contact you
+                </p>
               </div>
-            </Card>
 
-            <Button
-              type="submit"
-              variant="hero"
-              className="w-full"
-              size="lg"
-              disabled={!termsAccepted || loading}>
-              {loading ? "Creating Store..." : "Create Your Store"}
-            </Button>
-          </form>
-        </Card>
+              <Card className="p-6 bg-muted/50">
+                <h3 className="font-semibold mb-2">Terms and Conditions</h3>
+                <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
+                  <p>
+                    By creating a store on Tech fusion Solutions, you agree to:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Sell only legal products and services</li>
+                    <li>Provide accurate product descriptions and pricing</li>
+                    <li>Respond to customer inquiries in a timely manner</li>
+                    <li>Not engage in fraudulent or misleading activities</li>
+                    <li>Comply with all applicable laws and regulations</li>
+                    <li>
+                      Allow Tech fusion Solutions to display your store publicly
+                    </li>
+                    <li>Pay any applicable fees or commissions</li>
+                  </ul>
+                  <p className="mt-2">
+                    Tech fusion Solutions reserves the right to deactivate
+                    stores that violate these terms.
+                  </p>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="terms"
+                    checked={termsAccepted}
+                    onCheckedChange={checked =>
+                      setTermsAccepted(checked as boolean)
+                    }
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    I have read and agree to the terms and conditions *
+                  </label>
+                </div>
+              </Card>
+
+              <Button
+                type="submit"
+                variant="hero"
+                className="w-full"
+                size="lg"
+                disabled={!termsAccepted || loading}>
+                {loading ? "Creating Store..." : "Create Your Store"}
+              </Button>
+            </form>
+          </Card>
+        </div>
       </div>
     </div>
   );

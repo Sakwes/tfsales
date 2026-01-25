@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Store, Phone, MessageCircle, ShoppingBag } from "lucide-react";
+import { Store, Phone, MessageCircle, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useMetaTags } from "@/hooks/use-meta-tags";
@@ -26,6 +26,7 @@ const StoreFront = () => {
   const { storeName } = useParams();
   const [store, setStore] = useState<StoreData | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -92,13 +93,30 @@ const StoreFront = () => {
 
   const handleProductClick = async (product: Product) => {
     setSelectedProduct(product);
-    
+    setCurrentImageIndex(0);
+
     // Track product view
     if (store) {
       await supabase.from("product_views").insert({
         product_id: product.id,
         store_id: store.id
       });
+    }
+  };
+
+  const handleNextImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 0) {
+      setCurrentImageIndex((prev) =>
+        prev === selectedProduct.images.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 0) {
+      setCurrentImageIndex((prev) =>
+        prev === 0 ? selectedProduct.images.length - 1 : prev - 1
+      );
     }
   };
 
@@ -218,26 +236,54 @@ const StoreFront = () => {
               onClick={e => e.stopPropagation()}>
               <div className="grid md:grid-cols-2 gap-6 p-6">
                 <div className="space-y-4">
-                  <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  <div className="relative aspect-square bg-muted rounded-lg flex items-center justify-center group">
                     {selectedProduct.images.length > 0 ? (
-                      <img
-                        src={selectedProduct.images[0]}
-                        alt={selectedProduct.name}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
+                      <>
+                        <img
+                          src={selectedProduct.images[currentImageIndex]}
+                          alt={selectedProduct.name}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        {selectedProduct.images.length > 1 && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                              onClick={handlePrevImage}>
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                              onClick={handleNextImage}>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                              {currentImageIndex + 1} / {selectedProduct.images.length}
+                            </div>
+                          </>
+                        )}
+                      </>
                     ) : (
                       <ShoppingBag className="h-24 w-24 text-muted-foreground" />
                     )}
                   </div>
                   {selectedProduct.images.length > 1 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {selectedProduct.images.slice(1).map((img, i) => (
+                    <div className="grid grid-cols-4 gap-2">
+                      {selectedProduct.images.map((img, i) => (
                         <div
                           key={i}
-                          className="aspect-square bg-muted rounded overflow-hidden">
+                          className={`aspect-square bg-muted rounded overflow-hidden cursor-pointer border-2 transition-all ${
+                            i === currentImageIndex
+                              ? "border-primary"
+                              : "border-transparent hover:border-muted-foreground/50"
+                          }`}
+                          onClick={() => setCurrentImageIndex(i)}>
                           <img
                             src={img}
-                            alt={`${selectedProduct.name} ${i + 2}`}
+                            alt={`${selectedProduct.name} ${i + 1}`}
                             className="w-full h-full object-cover"
                           />
                         </div>

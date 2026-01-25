@@ -91,7 +91,7 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md">
         <Link
           to="/auth/login"
-          className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
+          className="inline-flex items-center text-white mb-6 hover:opacity-50 transition-opacity">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Login
         </Link>

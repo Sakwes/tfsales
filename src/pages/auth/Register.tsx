@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
@@ -14,6 +14,8 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUp } = useAuth();
@@ -74,7 +76,7 @@ const Register = () => {
       <div className="w-full max-w-md">
         <Link
           to="/"
-          className="inline-flex items-center text-white mb-6 hover:opacity-80 transition-opacity">
+          className="inline-flex items-center text-white mb-6 hover:opacity-50 transition-opacity">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Link>
@@ -116,13 +118,23 @@ const Register = () => {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="pl-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute z-10 px-2 py-1 right-px top-0 bottom-0 my-auto hover:opacity-50 transition-opacity">
+                  {!showPassword ? (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <EyeClosed className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Must be at least 6 characters
@@ -135,13 +147,23 @@ const Register = () => {
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   className="pl-10"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute z-10 px-2 py-1 right-px top-0 bottom-0 my-auto hover:opacity-50 transition-opacity">
+                  {!showConfirmPassword ? (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <EyeClosed className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
               </div>
             </div>
 

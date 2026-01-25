@@ -90,7 +90,7 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-semibold mb-2">Quick Sign Up</h3>
               <p className="text-muted-foreground">
-                Register with just your phone number and a 4-digit PIN. No
+                Register with just your email and password. No
                 complex forms or lengthy processes.
               </p>
             </Card>
@@ -114,7 +114,7 @@ const Landing = () => {
                 Shareable Store URL
               </h3>
               <p className="text-muted-foreground">
-                Get your unique store link ({import.meta.env.VITE_STORE_URL}
+                Get your unique store link (https://tfsales.com.ng
                 /yourstore) to share on WhatsApp, Facebook, and Instagram.
               </p>
             </Card>
@@ -177,8 +177,7 @@ const Landing = () => {
                   Create Your Account
                 </h3>
                 <p className="text-muted-foreground">
-                  Enter your phone number and choose a 4-digit PIN. Verify with
-                  SMS code and you're in!
+                  Register using your email and password. It's quick and easy.
                 </p>
               </Card>
             </div>

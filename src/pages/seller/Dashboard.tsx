@@ -45,6 +45,9 @@ const Dashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -246,6 +249,7 @@ const Dashboard = () => {
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    setIsDeleting(true);
     const { error } = await supabase
       .from("products")
       .delete()
@@ -257,9 +261,13 @@ const Dashboard = () => {
         description: "Could not delete product",
         variant: "destructive"
       });
+      setIsDeleting(false);
       return;
     }
 
+    setShowDeleteModal(false);
+    setIsDeleting(false);
+    setDeletingProduct(null);
     toast({
       title: "Product Deleted",
       description: "Product has been removed from your store"
@@ -312,25 +320,57 @@ const Dashboard = () => {
 
   if (!store) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="p-8 text-center">
-          <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">No Store Found</h2>
-          <p className="text-muted-foreground mb-4">
-            You need to set up your store first
-          </p>
-          <Link to="/seller/onboarding">
-            <Button variant="hero">Set Up Store</Button>
-          </Link>
+      <div className="w-full h-full min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="h-fit w-full bg-card border-b shadow-sm sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
+                  <img src={logo} className="h-8 w-8 text-white" alt="" />
+                </div>
+                <div></div>
+              </div>
 
-          {isAdmin && (
-            <div>
-              <Link to="/admin" className="mt-4 inline-block">
-                <Button variant="outline">Go to Admin Dashboard</Button>
-              </Link>
+              <div className="w-full md:w-fit flex gap-2 justify-end md:gap-4 md:items-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="hidden md:flex">
+                  Logout
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="md:hidden">
+                  <LogOut className="mr-0 h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          )}
-        </Card>
+          </div>
+        </header>
+        <div className="h-full flex-grow flex justify-center items-center p-4">
+          <Card className="p-8 text-center">
+            <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-2">No Store Found</h2>
+            <p className="text-muted-foreground mb-4">
+              You need to set up your store first
+            </p>
+            <Link to="/seller/onboarding">
+              <Button variant="hero">Set Up Store</Button>
+            </Link>
+
+            {isAdmin && (
+              <div>
+                <Link to="/admin" className="mt-4 inline-block">
+                  <Button variant="outline">Go to Admin Dashboard</Button>
+                </Link>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
     );
   }
@@ -368,10 +408,18 @@ const Dashboard = () => {
                 </Button>
               </Link>
               <RoleSwitcher />
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden md:flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="hidden md:flex">
                 Logout
               </Button>
-              <Button variant="default" size="sm" onClick={handleLogout} className="md:hidden">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleLogout}
+                className="md:hidden">
                 <LogOut className="mr-0 h-4 w-4" />
               </Button>
             </div>
@@ -385,7 +433,7 @@ const Dashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div>
               <h2 className="text-lg font-semibold">Your Store URL</h2>
-              <p className="text-xs text-white/80 font-medium">
+              <p className="text-xs text-white/90 font-medium">
                 Share your store with customers using the link below.
               </p>
             </div>
@@ -422,7 +470,7 @@ const Dashboard = () => {
               </Button>
             </Link>
           </div>
-          <p className="text-xs text-white/60 mt-3 text-center sm:text-left">
+          <p className="text-xs text-white/90 mt-3 text-center sm:text-left">
             When shared on social media, your store will show your name and
             contact info for better engagement.
           </p>
@@ -495,7 +543,10 @@ const Dashboard = () => {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDeleteProduct(product.id)}>
+                      onClick={() => {
+                        setDeletingProduct(product);
+                        setShowDeleteModal(true);
+                      }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -612,14 +663,53 @@ const Dashboard = () => {
                     {uploading
                       ? "Saving..."
                       : editingProduct
-                      ? "Save Changes"
-                      : "Add Product"}
+                        ? "Save Changes"
+                        : "Add Product"}
                   </Button>
-                  <Button type="button" variant="outline" onClick={resetForm}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetForm}
+                    disabled={uploading}>
                     Cancel
                   </Button>
                 </div>
               </form>
+            </Card>
+          </div>
+        )}
+
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+              <h2 className="text-2xl font-bold mb-6">
+                Confirm Product Deletion
+              </h2>
+              <p className="text-gray-600 mb-5">
+                Are you sure you want to delete this product? This action cannot
+                be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-fit mt-4"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeletingProduct(null);
+                  }}
+                  disabled={isDeleting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-fit mt-4"
+                  disabled={isDeleting}
+                  onClick={() => handleDeleteProduct(deletingProduct.id)}>
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
             </Card>
           </div>
         )}
