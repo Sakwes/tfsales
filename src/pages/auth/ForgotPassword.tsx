@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,22 @@ const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const location = useLocation();
   const { toast } = useToast();
   const { resetPassword } = useAuth();
+
+  // Show errors from navigation state (e.g., expired reset links)
+  useEffect(() => {
+    const state = location.state as { error?: string } | null;
+    if (state?.error) {
+      toast({
+        title: "Link Expired",
+        description: state.error,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

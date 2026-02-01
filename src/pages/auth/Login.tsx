@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,30 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { signIn } = useAuth();
+
+  // Show messages/errors from navigation state (e.g., from auth callbacks)
+  useEffect(() => {
+    const state = location.state as { message?: string; error?: string } | null;
+    if (state?.message) {
+      toast({
+        title: "Success",
+        description: state.message,
+      });
+      // Clear state to prevent showing again on refresh
+      window.history.replaceState({}, document.title);
+    }
+    if (state?.error) {
+      toast({
+        title: "Error",
+        description: state.error,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

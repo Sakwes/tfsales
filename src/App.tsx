@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { AuthCallbackHandler } from "./components/AuthCallbackHandler";
 import Landing from "./pages/Landing";
 import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
@@ -30,6 +31,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AuthCallbackHandler />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth/register" element={<Register />} />

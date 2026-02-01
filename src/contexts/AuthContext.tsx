@@ -1,6 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: User | null;
@@ -22,13 +28,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-    // Check for existing session
+        /**
+         * ✅ PASSWORD RESET FLOW
+         * This fires ONLY when the recovery token is valid
+         */
+        if (event === "PASSWORD_RECOVERY") {
+          window.location.replace("/auth/reset-password");
+        }
+      });
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -39,25 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${import.meta.env.VITE_STORE_URL || window.location.origin}/auth/login`;
-    
-    const { data, error } = await supabase.auth.signUp({
+    const redirectUrl = `${window.location.origin}`;
+
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-      }
+      },
     });
 
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
     return { error };
   };
 
@@ -66,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${import.meta.env.VITE_STORE_URL || window.location.origin}/auth/reset-password`;
-    
+    const redirectUrl = `${window.location.origin}`;
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
@@ -79,26 +91,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
-
     return { error };
   };
 
   const resendActivationEmail = async (email: string) => {
-    const redirectUrl = `${import.meta.env.VITE_STORE_URL || window.location.origin}/auth/login`;
+    const redirectUrl = `${window.location.origin}`;
 
     const { error } = await supabase.auth.resend({
-      type: 'signup',
+      type: "signup",
       email,
       options: {
         emailRedirectTo: redirectUrl,
-      }
+      },
     });
 
     return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword, resendActivationEmail }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signUp,
+        signIn,
+        signOut,
+        resetPassword,
+        updatePassword,
+        resendActivationEmail,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -106,8 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
