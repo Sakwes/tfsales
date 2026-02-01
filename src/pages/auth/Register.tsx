@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeClosed, CheckCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
@@ -16,9 +16,11 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const navigate = useNavigate();
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
+  const [resending, setResending] = useState(false);
   const { toast } = useToast();
-  const { signUp } = useAuth();
+  const { signUp, resendActivationEmail } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +65,94 @@ const Register = () => {
       return;
     }
 
-    toast({
-      title: "Check Your Email!",
-      description: "We've sent you a confirmation link to verify your account"
-    });
-
-    navigate("/auth/login");
+    setSubmittedEmail(email);
+    setRegistrationComplete(true);
   };
+
+  const handleResendEmail = async () => {
+    setResending(true);
+    const { error } = await resendActivationEmail(submittedEmail);
+    setResending(false);
+
+    if (error) {
+      toast({
+        title: "Failed to Resend",
+        description: error.message || "Could not resend activation email",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Email Sent!",
+      description: "A new activation email has been sent to your inbox"
+    });
+  };
+
+  if (registrationComplete) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Link
+            to="/"
+            className="inline-flex items-center text-white mb-6 hover:opacity-50 transition-opacity">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+
+          <Card className="p-8 shadow-glow animate-fade-in">
+            <div className="flex items-center justify-center mb-6">
+              <div className="bg-green-100 p-4 rounded-full">
+                <CheckCircle className="h-12 w-12 text-green-600" />
+              </div>
+            </div>
+
+            <h1 className="text-2xl font-bold text-center mb-2">
+              Check Your Email
+            </h1>
+            <p className="text-muted-foreground text-center mb-4">
+              Your account activation email has been sent to:
+            </p>
+            <p className="text-center font-semibold text-primary mb-6">
+              {submittedEmail}
+            </p>
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              Please click the link in the email to activate your account. If you don't see it, check your spam folder.
+            </p>
+
+            <div className="space-y-4">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleResendEmail}
+                disabled={resending}>
+                {resending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Resend Activation Email
+                  </>
+                )}
+              </Button>
+
+              <p className="text-sm text-center text-muted-foreground">
+                Already activated?{" "}
+                <Link
+                  to="/auth/login"
+                  className="text-primary hover:underline font-medium">
+                  Login here
+                </Link>
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">

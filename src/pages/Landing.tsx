@@ -29,7 +29,7 @@ const Landing = () => {
             Create an Online Store in Minutes
           </h1>
 
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto animate-fade-in">
+          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto animate-fade-in">
             No website needed. Just upload your products and generate your
             unique store link.
             <br />
@@ -114,7 +114,7 @@ const Landing = () => {
                 Shareable Store URL
               </h3>
               <p className="text-muted-foreground">
-                Get your unique store link (https://tfsales.com.ng
+                Get your unique store link (https://sellnova.com.ng
                 /yourstore) to share on WhatsApp, Facebook, and Instagram.
               </p>
             </Card>
@@ -241,7 +241,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
             <img src={logo} className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold">Tech fusion Solutions</span>
+            <span className="text-xl font-bold">Sell Novas</span>
           </div>
           <p className="text-muted-foreground mb-4">
             Empowering sellers to build their online presence

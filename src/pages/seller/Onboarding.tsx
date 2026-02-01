@@ -9,6 +9,7 @@ import { Phone, LogOut, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isReservedStoreName } from "@/lib/constants";
 import logo from "@/assets/logo.png";
 
 const Onboarding = () => {
@@ -56,6 +57,15 @@ const Onboarding = () => {
       toast({
         title: "Invalid Store Name",
         description: "Store name must be at least 3 characters",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isReservedStoreName(storeName)) {
+      toast({
+        title: "Store Name Not Available",
+        description: "This store name is reserved. Please choose a different name.",
         variant: "destructive"
       });
       return;
@@ -171,9 +181,9 @@ const Onboarding = () => {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  This will be part of your store URL:{" "}
+                  Your store URL:{" "}
                   {import.meta.env.VITE_STORE_URL}/
-                  {storeName.toLowerCase().replace(/\s+/g, "-")}
+                  {storeName.toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
                 </p>
               </div>
 
@@ -200,7 +210,7 @@ const Onboarding = () => {
                 <h3 className="font-semibold mb-2">Terms and Conditions</h3>
                 <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
                   <p>
-                    By creating a store on Tech fusion Solutions, you agree to:
+                    By creating a store on Sell Novas, you agree to:
                   </p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Sell only legal products and services</li>
@@ -209,12 +219,12 @@ const Onboarding = () => {
                     <li>Not engage in fraudulent or misleading activities</li>
                     <li>Comply with all applicable laws and regulations</li>
                     <li>
-                      Allow Tech fusion Solutions to display your store publicly
+                      Allow Sell Novas to display your store publicly
                     </li>
                     <li>Pay any applicable fees or commissions</li>
                   </ul>
                   <p className="mt-2">
-                    Tech fusion Solutions reserves the right to deactivate
+                    Sell Novas reserves the right to deactivate
                     stores that violate these terms.
                   </p>
                 </div>

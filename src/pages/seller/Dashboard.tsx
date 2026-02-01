@@ -123,7 +123,7 @@ const Dashboard = () => {
   };
 
   const copyStoreUrl = () => {
-    const url = `${import.meta.env.VITE_STORE_URL}/store/${store?.store_name
+    const url = `${import.meta.env.VITE_STORE_URL}/${store?.store_name
       ?.toLowerCase()
       .replace(/\s+/g, "-")}`;
     navigator.clipboard.writeText(url);
@@ -148,6 +148,10 @@ const Dashboard = () => {
 
   const removeFile = (index: number) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setProductImages(productImages.filter((_, i) => i !== index));
   };
 
   const uploadImages = async (files: File[]): Promise<string[]> => {
@@ -178,7 +182,8 @@ const Dashboard = () => {
 
     if (!store) return;
 
-    if (uploadedFiles.length === 0 && !editingProduct) {
+    const totalImages = uploadedFiles.length + (editingProduct ? productImages.length : 0);
+    if (totalImages === 0) {
       toast({
         title: "Images Required",
         description: "Please upload at least one product image",
@@ -199,7 +204,7 @@ const Dashboard = () => {
     setUploading(true);
 
     try {
-      let imageUrls = editingProduct ? editingProduct.images : [];
+      let imageUrls = editingProduct ? productImages : [];
 
       if (uploadedFiles.length > 0) {
         const newUrls = await uploadImages(uploadedFiles);
@@ -449,7 +454,7 @@ const Dashboard = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm break-all">
-              {import.meta.env.VITE_STORE_URL}/store/
+              {import.meta.env.VITE_STORE_URL}/
               {store.store_name.toLowerCase().replace(/\s+/g, "-")}
             </div>
             <Button
@@ -460,7 +465,7 @@ const Dashboard = () => {
               Copy Link
             </Button>
             <Link
-              to={`/store/${store.store_name
+              to={`/${store.store_name
                 .toLowerCase()
                 .replace(/\s+/g, "-")}`}
               target="_blank">
@@ -590,12 +595,18 @@ const Dashboard = () => {
                     {productImages.map((url, i) => (
                       <div
                         key={`existing-${i}`}
-                        className="aspect-square border-2 rounded-lg overflow-hidden">
+                        className="relative aspect-square border-2 rounded-lg overflow-hidden">
                         <img
                           src={url}
                           alt={`Product ${i + 1}`}
                           className="w-full h-full object-cover"
                         />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(i)}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1">
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     ))}
                     {uploadedFiles.length + productImages.length <

@@ -51,7 +51,6 @@ const App = () => (
                 <Analytics />
               </ProtectedRoute>
             } />
-            <Route path="/store/:storeName" element={<StoreFront />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/support" element={<Support />} />
@@ -60,7 +59,11 @@ const App = () => (
                 <AdminDashboard />
               </AdminRoute>
             } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* 404 route - must be before /:storeName to handle redirects from StoreFront */}
+            <Route path="/404" element={<NotFound />} />
+            {/* Store route - MUST be last before catch-all to avoid conflicts with other routes */}
+            <Route path="/:storeName" element={<StoreFront />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE STORE "/:storeName" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

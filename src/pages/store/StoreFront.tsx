@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { useMetaTags } from "@/hooks/use-meta-tags";
+import { isReservedStoreName } from "@/lib/constants";
 
 interface Product {
   id: string;
@@ -45,7 +46,7 @@ const StoreFront = () => {
       ? `Browse products at ${store.store_name}. Contact us on WhatsApp: ${store.contact_phone}`
       : "Loading store details...",
     image: store?.products?.[0]?.images?.[0] || "/logo.png",
-    url: `${import.meta.env.VITE_STORE_URL || window.location.origin}/store/${storeName}`,
+    url: `${import.meta.env.VITE_STORE_URL || window.location.origin}/${storeName}`,
     type: "website",
     phone: store?.contact_phone,
     storeName: store?.store_name
@@ -57,6 +58,13 @@ const StoreFront = () => {
 
   const loadStore = async () => {
     if (!storeName) return;
+
+    // Check if this is a reserved route name - if so, it's a 404
+    if (isReservedStoreName(storeName)) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
 
@@ -137,17 +145,8 @@ const StoreFront = () => {
   }
 
   if (notFound || !store) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="p-12 text-center max-w-md">
-          <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Store Not Found</h2>
-          <p className="text-muted-foreground">
-            This store doesn't exist or has been deactivated
-          </p>
-        </Card>
-      </div>
-    );
+    // Redirect to 404 page for non-existent stores
+    return <Navigate to="/404" replace />;
   }
 
   return (
@@ -161,7 +160,7 @@ const StoreFront = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold">{store.store_name}</h1>
-              <p className="text-white/80 flex items-center gap-2 mt-1">
+              <p className="text-white flex items-center gap-2 mt-1">
                 <Phone className="h-4 w-4" />
                 {store.contact_phone}
               </p>
@@ -346,7 +345,7 @@ const StoreFront = () => {
       {/* Footer */}
       <footer className="bg-card border-t py-8 px-4 sm:px-6 lg:px-8 mt-12">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground">
-          <p className="mb-2">Powered by Tech fusion Solutions</p>
+          <p className="mb-2">Powered by Sell Novas</p>
           <p className="text-sm">
             To create your own store register{" "}
             <Link

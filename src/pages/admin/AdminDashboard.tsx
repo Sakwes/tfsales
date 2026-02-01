@@ -715,7 +715,7 @@ const AdminDashboard = () => {
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Link
-                            to={`/store/${seller.store_name
+                            to={`/${seller.store_name
                               .toLowerCase()
                               .replace(/\s+/g, "-")}`}
                             target="_blank">

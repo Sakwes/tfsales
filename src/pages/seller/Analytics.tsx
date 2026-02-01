@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   BarChart3,
   Eye,
@@ -23,11 +22,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import CustomLineChart from "@/components/graphs/CustomLineChart";
 
-interface DailyVisits {
-  date: string;
-  count: number;
-}
-
 interface ProductView {
   product_id: string;
   product_name: string;
@@ -39,10 +33,20 @@ const Analytics = () => {
   const [storeName, setStoreName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-  const [dateRange, setDateRange] = useState("7"); // days
+  const [dateRange, setDateRange] = useState<{
+    from: Date;
+    to: Date;
+  }>({
+    from: startOfDay(subDays(new Date(), 7)),
+    to: endOfDay(new Date())
+  });
+  const [tempDateRange, setTempDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({ from: undefined, to: undefined });
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [totalVisits, setTotalVisits] = useState(0);
   const [totalProductViews, setTotalProductViews] = useState(0);
-  // In your component state, add:
   const [dailyStats, setDailyStats] = useState<
     Array<{
       label: string;
@@ -53,6 +57,34 @@ const Analytics = () => {
   >([]);
   const [topProducts, setTopProducts] = useState<ProductView[]>([]);
   const { user } = useAuth();
+
+  const getDisplayDays = () => {
+    const daysDiff = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.min(daysDiff, 14);
+  };
+
+  const handleDatePickerOpen = () => {
+    setTempDateRange({
+      from: dateRange.from,
+      to: dateRange.to
+    });
+    setIsDatePickerOpen(true);
+  };
+
+  const handleApplyDateRange = () => {
+    if (tempDateRange.from && tempDateRange.to) {
+      setDateRange({
+        from: startOfDay(tempDateRange.from),
+        to: endOfDay(tempDateRange.to)
+      });
+      setIsDatePickerOpen(false);
+    }
+  };
+
+  const handleCancelDateRange = () => {
+    setTempDateRange({ from: undefined, to: undefined });
+    setIsDatePickerOpen(false);
+  };
 
   useEffect(() => {
     loadStore();
@@ -84,9 +116,10 @@ const Analytics = () => {
     setLoadingAnalytics(true);
     if (!storeId) return;
 
-    const daysAgo = parseInt(dateRange);
-    const startDate = startOfDay(subDays(new Date(), daysAgo));
-    const endDate = endOfDay(new Date());
+    const startDate = dateRange.from;
+    const endDate = dateRange.to;
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const displayDays = Math.min(daysDiff, 14);
 
     // Get total store visits in range
     const { count: visitsCount } = await supabase
@@ -123,10 +156,10 @@ const Analytics = () => {
       .gte("viewed_at", startDate.toISOString())
       .lte("viewed_at", endDate.toISOString());
 
-    // / Initialize daily map with all dates in range
+    // Initialize daily map with all dates in range
     const dailyMap = new Map<string, { visits: number; views: number }>();
-    for (let i = daysAgo; i >= 0; i--) {
-      const day = format(subDays(new Date(), i), "yyyy-MM-dd");
+    for (let i = displayDays - 1; i >= 0; i--) {
+      const day = format(subDays(endDate, i), "yyyy-MM-dd");
       dailyMap.set(day, { visits: 0, views: 0 });
     }
 
@@ -213,8 +246,6 @@ const Analytics = () => {
     );
   }
 
-  const maxVisits = Math.max(...dailyStats.map(day => day.visits), 1);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -233,18 +264,91 @@ const Analytics = () => {
               </div>
             </div>
 
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[140px]">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="14">Last 14 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-fit sm:w-[280px] justify-start text-left font-normal"
+                  onClick={handleDatePickerOpen}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">
+                    {format(dateRange.from, "MMM dd, yyyy")} - {format(dateRange.to, "MMM dd, yyyy")}
+                  </span>
+                  <span className="sm:hidden">
+                    {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd")}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-4 space-y-4">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={tempDateRange.from || dateRange.from}
+                    selected={{
+                      from: tempDateRange.from,
+                      to: tempDateRange.to
+                    }}
+                    onSelect={(range) => {
+                      if (tempDateRange.from && tempDateRange.to) {
+                        setTempDateRange({
+                          from: range?.from,
+                          to: undefined
+                        });
+                      } else {
+                        setTempDateRange({
+                          from: range?.from,
+                          to: range?.to
+                        });
+                      }
+                    }}
+                    numberOfMonths={2}
+                    className="hidden sm:block"
+                  />
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={tempDateRange.from || dateRange.from}
+                    selected={{
+                      from: tempDateRange.from,
+                      to: tempDateRange.to
+                    }}
+                    onSelect={(range) => {
+                      if (tempDateRange.from && tempDateRange.to) {
+                        setTempDateRange({
+                          from: range?.from,
+                          to: undefined
+                        });
+                      } else {
+                        setTempDateRange({
+                          from: range?.from,
+                          to: range?.to
+                        });
+                      }
+                    }}
+                    numberOfMonths={1}
+                    className="sm:hidden"
+                  />
+                  <div className="flex gap-2 pt-3 border-t">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleCancelDateRange}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleApplyDateRange}
+                      disabled={!tempDateRange.from || !tempDateRange.to}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </header>
@@ -263,7 +367,7 @@ const Analytics = () => {
             </div>
             <div className="text-3xl font-bold">{totalVisits}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Last {dateRange} days
+              {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd, yyyy")}
             </p>
           </Card>
 
@@ -278,7 +382,7 @@ const Analytics = () => {
             </div>
             <div className="text-3xl font-bold">{totalProductViews}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Last {dateRange} days
+              {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd, yyyy")}
             </p>
           </Card>
 
@@ -306,7 +410,7 @@ const Analytics = () => {
           <Card className="p-6 shadow-card">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Store Visits
+              Store Activity (Last {getDisplayDays()} days)
             </h3>
             <CustomLineChart
               chartData={dailyStats}
