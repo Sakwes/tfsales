@@ -83,7 +83,7 @@ export const useMetaTags = (config: MetaTagsConfig) => {
 
     // Cleanup function to reset meta tags
     return () => {
-      document.title = "Tech Fusion Solutions - Create Your Online Store in Minutes";
+      document.title = "Sell Novas - Create Your Online Store in Minutes";
     };
   }, [config.title, config.description, config.image, config.url, config.type, config.phone, config.storeName]);
 };

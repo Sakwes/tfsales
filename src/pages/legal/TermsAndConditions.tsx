@@ -20,14 +20,14 @@ const TermsAndConditions = () => {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground mb-4">
-              By accessing and using Tech Fusion Solutions ("the Platform"), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.
+              By accessing and using Sell Novas ("the Platform"), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">2. Description of Service</h2>
             <p className="text-muted-foreground mb-4">
-              Tech Fusion Solutions provides an online platform that enables users ("Sellers") to create and manage their own e-commerce stores. The Platform allows Sellers to:
+              Sell Novas provides an online platform that enables users ("Sellers") to create and manage their own e-commerce stores. The Platform allows Sellers to:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Create a personalized online storefront</li>
@@ -98,7 +98,7 @@ const TermsAndConditions = () => {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">8. Limitation of Liability</h2>
             <p className="text-muted-foreground mb-4">
-              Tech Fusion Solutions is not responsible for:
+              Sell Novas is not responsible for:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Transactions between Sellers and their customers</li>

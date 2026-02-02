@@ -76,7 +76,7 @@ const Login = () => {
 
     toast({
       title: "Login Successful!",
-      description: "Welcome back to Tech Fusion Solutions"
+      description: "Welcome back to Sell Nova"
     });
 
     navigate("/seller/dashboard");
