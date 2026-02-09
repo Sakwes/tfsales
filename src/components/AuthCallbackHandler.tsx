@@ -27,36 +27,31 @@ export function AuthCallbackHandler() {
       window.history.replaceState(null, "", window.location.pathname);
 
       if (errorCode === "otp_expired") {
-        const type = params.get("type");
+        window.history.replaceState(null, "", window.location.pathname);
 
-        if (type === "recovery") {
-          // Expired password reset link → forgot password page
+        // If the user came from a recovery flow, ALWAYS send to forgot password
+        if (
+          params.get("type") === "recovery" ||
+          window.location.pathname.includes("reset-password")
+        ) {
           navigate("/auth/forgot-password", {
             state: {
               error:
-                "This password reset link has expired. Please request a new one.",
+                "This password reset link has expired. Please request a new one."
             },
-            replace: true,
+            replace: true
           });
         } else {
-          // Expired signup/confirmation link → resend confirmation page
           navigate("/auth/resend-confirmation", {
             state: {
               error:
-                "This confirmation link has expired. Please request a new one.",
+                "This confirmation link has expired. Please request a new one."
             },
-            replace: true,
+            replace: true
           });
         }
-      } else {
-        navigate("/auth/login", {
-          state: {
-            error: errorDescription || "Authentication failed.",
-          },
-          replace: true,
-        });
+        return;
       }
-      return;
     }
 
     /**
@@ -68,15 +63,15 @@ export function AuthCallbackHandler() {
       window.history.replaceState(null, "", window.location.pathname);
       navigate("/auth/login", {
         state: {
-          message: "Email verified successfully. You can now log in.",
+          message: "Email verified successfully. You can now log in."
         },
-        replace: true,
+        replace: true
       });
     } else if (type === "recovery") {
-      // Don't navigate — let the PASSWORD_RECOVERY event in AuthContext
-      // handle the redirect to /auth/reset-password.
-      // Just clean the hash so it doesn't re-trigger.
+      // Valid recovery token — navigate to reset password page.
+      // Also handled by PASSWORD_RECOVERY event in AuthContext as a fallback.
       window.history.replaceState(null, "", window.location.pathname);
+      navigate("/auth/reset-password", { replace: true });
     } else if (type === "magiclink" || type === "invite") {
       window.history.replaceState(null, "", window.location.pathname);
       navigate("/seller/dashboard", { replace: true });

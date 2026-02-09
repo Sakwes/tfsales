@@ -3,7 +3,7 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  ReactNode
 } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,19 +28,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        /**
-         * ✅ PASSWORD RESET FLOW
-         * This fires ONLY when the recovery token is valid
-         */
-        if (event === "PASSWORD_RECOVERY") {
+      /**
+       * ✅ PASSWORD RESET FLOW
+       * This fires ONLY when the recovery token is valid
+       */
+      if (event === "PASSWORD_RECOVERY") {
+        if (window.location.pathname !== "/auth/reset-password") {
           window.location.replace("/auth/reset-password");
         }
-      });
+      }
+    });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -58,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
-      },
+        emailRedirectTo: redirectUrl
+      }
     });
 
     return { error };
@@ -68,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password
     });
     return { error };
   };
@@ -78,10 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const redirectUrl = `${window.location.origin}`;
+    const redirectUrl = `${window.location.origin}/auth/callback`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+      redirectTo: redirectUrl
     });
 
     return { error };
@@ -89,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword,
+      password: newPassword
     });
     return { error };
   };
@@ -101,8 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: redirectUrl,
-      },
+        emailRedirectTo: redirectUrl
+      }
     });
 
     return { error };
@@ -119,9 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resetPassword,
         updatePassword,
-        resendActivationEmail,
-      }}
-    >
+        resendActivationEmail
+      }}>
       {children}
     </AuthContext.Provider>
   );
