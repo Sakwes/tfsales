@@ -14,6 +14,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
@@ -48,7 +49,9 @@ import {
   Package,
   Calendar,
   BarChart3,
-  MousePointerClick
+  MousePointerClick,
+  Pencil,
+  Phone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +59,9 @@ import { useToast } from "@/hooks/use-toast";
 // import { RoleSwitcher } from "@/components/RoleSwitcher";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import CustomLineChart from "@/components/graphs/CustomLineChart";
+import { isReservedStoreName } from "@/lib/constants";
+import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/lib/utils";
 
 interface Seller {
   id: string;
@@ -114,6 +120,10 @@ const AdminDashboard = () => {
     storeName: string;
     isActive: boolean;
   } | null>(null);
+  const [isEditStoreModalOpen, setIsEditStoreModalOpen] = useState(false);
+  const [editStoreName, setEditStoreName] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [savingStore, setSavingStore] = useState(false);
   const { signOut } = useAuth();
   const { toast } = useToast();
 
@@ -407,6 +417,68 @@ const AdminDashboard = () => {
   const cancelToggleStoreStatus = () => {
     setIsConfirmDialogOpen(false);
     setSellerToToggle(null);
+  };
+
+  const openEditStoreModal = (seller: Seller) => {
+    setSelectedSeller(seller);
+    setEditStoreName(seller.store_name);
+    setEditContactPhone(seller.contact_phone);
+    setIsEditStoreModalOpen(true);
+  };
+
+  const handleSaveStore = async () => {
+    if (!selectedSeller) return;
+
+    const trimmedName = editStoreName.trim();
+
+    if (trimmedName.length < 3) {
+      toast({ title: "Invalid Store Name", description: "Store name must be at least 3 characters", variant: "destructive" });
+      return;
+    }
+
+    if (isReservedStoreName(trimmedName)) {
+      toast({ title: "Store Name Not Available", description: "This store name is reserved. Please choose a different name.", variant: "destructive" });
+      return;
+    }
+
+    if (editContactPhone.length < 10) {
+      toast({ title: "Invalid Phone Number", description: "Please enter a valid contact phone number", variant: "destructive" });
+      return;
+    }
+
+    setSavingStore(true);
+
+    // Check uniqueness (case-insensitive) excluding current store
+    const { data: existing } = await supabase
+      .from("stores")
+      .select("id")
+      .ilike("store_name", trimmedName)
+      .neq("id", selectedSeller.store_id)
+      .maybeSingle();
+
+    if (existing) {
+      toast({ title: "Store Name Taken", description: "Another store already uses this name. Please choose a different one.", variant: "destructive" });
+      setSavingStore(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("stores")
+      .update({ store_name: trimmedName, contact_phone: editContactPhone })
+      .eq("id", selectedSeller.store_id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message || "Could not update store", variant: "destructive" });
+      setSavingStore(false);
+      return;
+    }
+
+    toast({ title: "Store Updated", description: `${trimmedName} has been updated successfully` });
+    setIsEditStoreModalOpen(false);
+    setSavingStore(false);
+    // Update selectedSeller in place if the details modal is open
+    setSelectedSeller({ ...selectedSeller, store_name: trimmedName, contact_phone: editContactPhone });
+    await loadSellers();
   };
 
   const filteredSellers = sellers.filter(
@@ -714,8 +786,15 @@ const AdminDashboard = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditStoreModal(seller)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Link
-                            to={`/${seller.store_name
+                            to={`/store/${seller.store_name
                               .toLowerCase()
                               .replace(/\s+/g, "-")}`}
                             target="_blank">
@@ -772,10 +851,20 @@ const AdminDashboard = () => {
               {/* Seller Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Store className="h-4 w-4" />
-                    Store Information
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Store className="h-4 w-4" />
+                      Store Information
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditStoreModal(selectedSeller)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {/* Edit */}
+                    </Button>
+                  </div>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Store Name:</span>
@@ -909,7 +998,7 @@ const AdminDashboard = () => {
                             )}
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-lg font-bold text-primary">
-                                ${Number(product.price).toFixed(2)}
+                                {formatCurrency(product.price)}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {new Date(product.created_at).toLocaleDateString()}
@@ -964,6 +1053,66 @@ const AdminDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Store Modal */}
+      <Dialog open={isEditStoreModalOpen} onOpenChange={setIsEditStoreModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Store Details</DialogTitle>
+            <DialogDescription>
+              Update store name and contact phone for {selectedSeller?.store_name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="adminEditStoreName">Store Name</Label>
+              <Input
+                id="adminEditStoreName"
+                value={editStoreName}
+                onChange={e => {
+                  const value = e.target.value.replace(/[^a-zA-Z0-9\s]/g, "");
+                  setEditStoreName(value);
+                }}
+                placeholder="Store Name"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Only letters, numbers, and spaces are allowed.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Store URL: {import.meta.env.VITE_STORE_URL}/store/
+                {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "store-name"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminEditContactPhone">Contact Phone</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="adminEditContactPhone"
+                  type="tel"
+                  value={editContactPhone}
+                  onChange={e => setEditContactPhone(e.target.value)}
+                  placeholder="+234xxxxxxxxxx"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditStoreModalOpen(false)}
+              disabled={savingStore}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveStore}
+              disabled={savingStore}>
+              {savingStore ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

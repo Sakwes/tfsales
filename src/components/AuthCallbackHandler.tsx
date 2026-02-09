@@ -24,14 +24,30 @@ export function AuthCallbackHandler() {
      * ❌ EXPIRED / INVALID LINKS
      */
     if (error) {
+      window.history.replaceState(null, "", window.location.pathname);
+
       if (errorCode === "otp_expired") {
-        navigate("/auth/login", {
-          state: {
-            error:
-              "This link has expired. Please request a new one.",
-          },
-          replace: true,
-        });
+        const type = params.get("type");
+
+        if (type === "recovery") {
+          // Expired password reset link → forgot password page
+          navigate("/auth/forgot-password", {
+            state: {
+              error:
+                "This password reset link has expired. Please request a new one.",
+            },
+            replace: true,
+          });
+        } else {
+          // Expired signup/confirmation link → resend confirmation page
+          navigate("/auth/resend-confirmation", {
+            state: {
+              error:
+                "This confirmation link has expired. Please request a new one.",
+            },
+            replace: true,
+          });
+        }
       } else {
         navigate("/auth/login", {
           state: {
@@ -40,8 +56,6 @@ export function AuthCallbackHandler() {
           replace: true,
         });
       }
-
-      window.history.replaceState(null, "", window.location.pathname);
       return;
     }
 
@@ -51,19 +65,25 @@ export function AuthCallbackHandler() {
     const type = params.get("type");
 
     if (type === "signup" || type === "email") {
+      window.history.replaceState(null, "", window.location.pathname);
       navigate("/auth/login", {
         state: {
           message: "Email verified successfully. You can now log in.",
         },
         replace: true,
       });
+    } else if (type === "recovery") {
+      // Don't navigate — let the PASSWORD_RECOVERY event in AuthContext
+      // handle the redirect to /auth/reset-password.
+      // Just clean the hash so it doesn't re-trigger.
+      window.history.replaceState(null, "", window.location.pathname);
     } else if (type === "magiclink" || type === "invite") {
+      window.history.replaceState(null, "", window.location.pathname);
       navigate("/seller/dashboard", { replace: true });
     } else {
+      window.history.replaceState(null, "", window.location.pathname);
       navigate("/auth/login", { replace: true });
     }
-
-    window.history.replaceState(null, "", window.location.pathname);
   }, [navigate]);
 
   return null;

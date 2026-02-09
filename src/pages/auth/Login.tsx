@@ -174,6 +174,15 @@ const Login = () => {
                 Sign up here
               </Link>
             </p>
+
+            <p className="text-sm text-center text-muted-foreground">
+              Confirmation email expired?{" "}
+              <Link
+                to="/auth/resend-confirmation"
+                className="text-primary hover:underline font-medium">
+                Resend it
+              </Link>
+            </p>
           </form>
         </Card>
       </div>

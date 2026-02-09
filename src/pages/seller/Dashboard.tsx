@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import {
   Store,
   Plus,
   Edit,
@@ -17,13 +25,15 @@ import {
   Mail,
   Phone,
   BarChart3,
-  LogOut
+  LogOut,
+  Pencil
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 import { formatCurrency } from "@/lib/utils";
+import { isReservedStoreName } from "@/lib/constants";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
 
 interface Product {
@@ -59,6 +69,12 @@ const Dashboard = () => {
   const [productPrice, setProductPrice] = useState("");
   const [productImages, setProductImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+  // Edit store state
+  const [showEditStore, setShowEditStore] = useState(false);
+  const [editStoreName, setEditStoreName] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [savingStore, setSavingStore] = useState(false);
 
   const { toast } = useToast();
   const { user, signOut } = useAuth();
@@ -123,7 +139,7 @@ const Dashboard = () => {
   };
 
   const copyStoreUrl = () => {
-    const url = `${import.meta.env.VITE_STORE_URL}/${store?.store_name
+    const url = `${import.meta.env.VITE_STORE_URL}/store/${store?.store_name
       ?.toLowerCase()
       .replace(/\s+/g, "-")}`;
     navigator.clipboard.writeText(url);
@@ -131,6 +147,66 @@ const Dashboard = () => {
       title: "URL Copied!",
       description: "Share your store link with customers"
     });
+  };
+
+  const openEditStore = () => {
+    if (!store) return;
+    setEditStoreName(store.store_name);
+    setEditContactPhone(store.contact_phone);
+    setShowEditStore(true);
+  };
+
+  const handleSaveStore = async () => {
+    if (!store) return;
+
+    const trimmedName = editStoreName.trim();
+
+    if (trimmedName.length < 3) {
+      toast({ title: "Invalid Store Name", description: "Store name must be at least 3 characters", variant: "destructive" });
+      return;
+    }
+
+    if (isReservedStoreName(trimmedName)) {
+      toast({ title: "Store Name Not Available", description: "This store name is reserved. Please choose a different name.", variant: "destructive" });
+      return;
+    }
+
+    if (editContactPhone.length < 10) {
+      toast({ title: "Invalid Phone Number", description: "Please enter a valid contact phone number", variant: "destructive" });
+      return;
+    }
+
+    setSavingStore(true);
+
+    // Check uniqueness (case-insensitive) excluding current store
+    const { data: existing } = await supabase
+      .from("stores")
+      .select("id")
+      .ilike("store_name", trimmedName)
+      .neq("id", store.id)
+      .maybeSingle();
+
+    if (existing) {
+      toast({ title: "Store Name Taken", description: "Another store already uses this name. Please choose a different one.", variant: "destructive" });
+      setSavingStore(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("stores")
+      .update({ store_name: trimmedName, contact_phone: editContactPhone })
+      .eq("id", store.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message || "Could not update store", variant: "destructive" });
+      setSavingStore(false);
+      return;
+    }
+
+    toast({ title: "Store Updated", description: "Your store details have been updated successfully" });
+    setShowEditStore(false);
+    setSavingStore(false);
+    await loadStoreAndProducts();
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -444,17 +520,26 @@ const Dashboard = () => {
                 Share your store with customers using the link below.
               </p>
             </div>
-            <div className="text-right text-xs text-white">
-              {/* <p className="font-medium">{store.store_name}</p> */}
-              <p className="flex items-center gap-1 justify-end">
-                <Phone className="h-3 w-3" />
-                {store.contact_phone}
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="text-right text-xs text-white">
+                <p className="flex items-center gap-1 justify-end">
+                  <Phone className="h-3 w-3" />
+                  {store.contact_phone}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={openEditStore}>
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Edit
+              </Button>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm break-all">
-              {import.meta.env.VITE_STORE_URL}/
+              {import.meta.env.VITE_STORE_URL}/store/
               {store.store_name.toLowerCase().replace(/\s+/g, "-")}
             </div>
             <Button
@@ -465,7 +550,7 @@ const Dashboard = () => {
               Copy Link
             </Button>
             <Link
-              to={`/${store.store_name
+              to={`/store/${store.store_name
                 .toLowerCase()
                 .replace(/\s+/g, "-")}`}
               target="_blank">
@@ -691,6 +776,67 @@ const Dashboard = () => {
             </Card>
           </div>
         )}
+
+        {/* Edit Store Dialog */}
+        <Dialog open={showEditStore} onOpenChange={setShowEditStore}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Store Details</DialogTitle>
+              <DialogDescription>
+                Update your store name and contact phone number.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="editStoreName">Store Name</Label>
+                <Input
+                  id="editStoreName"
+                  value={editStoreName}
+                  onChange={e => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9\s]/g, "");
+                    setEditStoreName(value);
+                  }}
+                  placeholder="My Awesome Store"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Only letters, numbers, and spaces are allowed.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Store URL: {import.meta.env.VITE_STORE_URL}/store/
+                  {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editContactPhone">Contact Phone</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="editContactPhone"
+                    type="tel"
+                    value={editContactPhone}
+                    onChange={e => setEditContactPhone(e.target.value)}
+                    placeholder="+234xxxxxxxxxx"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditStore(false)}
+                disabled={savingStore}>
+                Cancel
+              </Button>
+              <Button
+                variant="hero"
+                onClick={handleSaveStore}
+                disabled={savingStore}>
+                {savingStore ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

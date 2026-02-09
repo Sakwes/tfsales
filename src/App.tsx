@@ -12,6 +12,7 @@ import Register from "./pages/auth/Register";
 import Login from "./pages/auth/Login";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import ResendConfirmation from "./pages/auth/ResendConfirmation";
 import Onboarding from "./pages/seller/Onboarding";
 import Dashboard from "./pages/seller/Dashboard";
 import Analytics from "./pages/seller/Analytics";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/resend-confirmation" element={<ResendConfirmation />} />
             <Route path="/seller/onboarding" element={
               <ProtectedRoute>
                 <Onboarding />
@@ -61,11 +63,8 @@ const App = () => (
                 <AdminDashboard />
               </AdminRoute>
             } />
-            {/* 404 route - must be before /:storeName to handle redirects from StoreFront */}
             <Route path="/404" element={<NotFound />} />
-            {/* Store route - MUST be last before catch-all to avoid conflicts with other routes */}
-            <Route path="/:storeName" element={<StoreFront />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE STORE "/:storeName" ROUTE */}
+            <Route path="/store/:storeName" element={<StoreFront />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

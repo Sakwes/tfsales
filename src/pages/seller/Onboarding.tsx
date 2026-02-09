@@ -82,6 +82,23 @@ const Onboarding = () => {
 
     setLoading(true);
 
+    // Check if store name is already taken (case-insensitive)
+    const { data: existing } = await supabase
+      .from("stores")
+      .select("id")
+      .ilike("store_name", storeName.trim())
+      .maybeSingle();
+
+    if (existing) {
+      toast({
+        title: "Store Name Taken",
+        description: "Another store already uses this name. Please choose a different one.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("stores")
       .insert({
@@ -177,12 +194,18 @@ const Onboarding = () => {
                   type="text"
                   placeholder="My Awesome Store"
                   value={storeName}
-                  onChange={e => setStoreName(e.target.value)}
+                  onChange={e => {
+                    const value = e.target.value.replace(/[^a-zA-Z0-9\s]/g, "");
+                    setStoreName(value);
+                  }}
                   required
                 />
+                <p className="text-[10px] text-muted-foreground">
+                  Only letters, numbers, and spaces are allowed.
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Your store URL:{" "}
-                  {import.meta.env.VITE_STORE_URL}/
+                  {import.meta.env.VITE_STORE_URL}/store/
                   {storeName.toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
                 </p>
               </div>

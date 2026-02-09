@@ -46,7 +46,7 @@ const StoreFront = () => {
       ? `Browse products at ${store.store_name}. Contact us on WhatsApp: ${store.contact_phone}`
       : "Loading store details...",
     image: store?.products?.[0]?.images?.[0] || "/logo.png",
-    url: `${import.meta.env.VITE_STORE_URL || window.location.origin}/${storeName}`,
+    url: `${import.meta.env.VITE_STORE_URL || window.location.origin}/store/${storeName}`,
     type: "website",
     phone: store?.contact_phone,
     storeName: store?.store_name
@@ -68,12 +68,15 @@ const StoreFront = () => {
 
     setLoading(true);
 
-    const normalizedName = storeName.toLowerCase().replace(/-/g, " ");
+    // URL slugs replace spaces with hyphens (e.g. "K-Drive Autos" → "k-drive-autos"),
+    // so at lookup time we can't tell which hyphens were spaces vs real hyphens.
+    // Use ILIKE with "_" wildcard for each hyphen to match both.
+    const pattern = storeName.replace(/-/g, "_");
 
     const { data: storeData, error: storeError } = await supabase
       .from("stores")
       .select("*")
-      .ilike("store_name", normalizedName)
+      .ilike("store_name", pattern)
       .eq("is_active", true)
       .maybeSingle();
 
@@ -145,8 +148,17 @@ const StoreFront = () => {
   }
 
   if (notFound || !store) {
-    // Redirect to 404 page for non-existent stores
-    return <Navigate to="/404" replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="p-12 text-center max-w-md">
+          <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">Store Not Found</h2>
+          <p className="text-muted-foreground">
+            This store doesn't exist or has been deactivated
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -181,9 +193,9 @@ const StoreFront = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-[70vh]">
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">Our Products</h2>
-          <p className="text-muted-foreground">
+          {/* <p className="text-muted-foreground">
             {store.products.length} products available
-          </p>
+          </p> */}
         </div>
 
         {store.products.length === 0 ? (
@@ -219,14 +231,12 @@ const StoreFront = () => {
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                     {product.description}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary">
-                      {formatCurrency(product.price)}
-                    </span>
-                    <Button size="sm" variant="hero">
-                      View Details
-                    </Button>
-                  </div>
+                  <p className="text-xl font-bold text-primary">
+                    {formatCurrency(product.price)}
+                  </p>
+                  <Button size="sm" variant="hero" className="w-full mt-2">
+                    View Details
+                  </Button>
                 </div>
               </Card>
             ))}
