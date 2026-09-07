@@ -50,6 +50,56 @@ const StoreFront = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
+  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  const addToCart = (product: Product, qty: number) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) {
+        return prev.map(i =>
+          i.id === product.id ? { ...i, quantity: i.quantity + qty } : i
+        );
+      }
+      return [...prev, { ...product, quantity: qty }];
+    });
+    toast.success(`${product.name} added to cart`);
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart(prev =>
+      prev
+        .map(i =>
+          i.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i
+        )
+        .filter(i => i.quantity > 0)
+    );
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleSendOrder = () => {
+    if (!store || cart.length === 0) return;
+    const phone = store.contact_phone.replace(/\D/g, "");
+    const lines = cart.map(
+      i =>
+        `• ${i.name} x${i.quantity} — ${formatCurrency(i.price * i.quantity)}`
+    );
+    const message = `Hello ${store.store_name}, I'd like to order:\n\n${lines.join(
+      "\n"
+    )}\n\nTotal: ${formatCurrency(cartTotal)}`;
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
+  };
+
 
   // Dynamic meta tags for social sharing
   useMetaTags({
