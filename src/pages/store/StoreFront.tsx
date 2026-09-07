@@ -179,6 +179,7 @@ const StoreFront = () => {
   const handleProductClick = async (product: Product) => {
     setSelectedProduct(product);
     setCurrentImageIndex(0);
+    setQuantity(1);
 
     // Track product view
     if (store) {
