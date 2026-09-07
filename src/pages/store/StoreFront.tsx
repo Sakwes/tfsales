@@ -246,15 +246,122 @@ const StoreFront = () => {
             </div>
           </div>
 
-          <Button
-            variant="accent"
-            onClick={handleContactSeller}
-            className="w-full sm:w-auto">
-            <MessageCircle className="mr-2 h-4 w-4" />
-            Contact Seller on WhatsApp
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="accent"
+              onClick={handleContactSeller}
+              className="w-full sm:w-auto">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Contact Seller on WhatsApp
+            </Button>
+
+            <Sheet open={cartOpen} onOpenChange={setCartOpen}>
+              <SheetTrigger asChild>
+                <Button variant="secondary" className="w-full sm:w-auto relative">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Cart
+                  {cartCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold h-5 min-w-5 px-1.5">
+                      {cartCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="flex flex-col w-full sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Your Cart</SheetTitle>
+                </SheetHeader>
+
+                {cart.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+                    <ShoppingCart className="h-12 w-12 mb-3" />
+                    <p>Your cart is empty</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1 overflow-y-auto space-y-4 py-4">
+                      {cart.map(item => (
+                        <div key={item.id} className="flex gap-3 items-center">
+                          <div className="h-16 w-16 shrink-0 rounded-md bg-muted overflow-hidden flex items-center justify-center">
+                            {item.images?.[0] ? (
+                              <img
+                                src={item.images[0]}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatCurrency(item.price)}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => updateQuantity(item.id, -1)}>
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-6 text-center text-sm">
+                                {item.quantity}
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7"
+                                onClick={() => updateQuantity(item.id, 1)}>
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 ml-auto"
+                                onClick={() => removeFromCart(item.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="font-semibold whitespace-nowrap">
+                            {formatCurrency(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total</span>
+                        <span className="text-primary">
+                          {formatCurrency(cartTotal)}
+                        </span>
+                      </div>
+                      <Button
+                        variant="hero"
+                        size="lg"
+                        className="w-full"
+                        onClick={handleSendOrder}>
+                        <MessageCircle className="mr-2 h-5 w-5" />
+                        Send Order on WhatsApp
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setCart([])}>
+                        Clear Cart
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
+
 
       {/* Products Section */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-[70vh]">
