@@ -3,10 +3,22 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from "@/components/ui/sheet";
+import { toast } from "sonner";
+import {
   Store,
   Phone,
   MessageCircle,
   ShoppingBag,
+  ShoppingCart,
+  Minus,
+  Plus,
+  Trash2,
   ChevronLeft,
   ChevronRight,
   X
