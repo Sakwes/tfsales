@@ -504,13 +504,52 @@ const StoreFront = () => {
                   </p>
 
                   <div className="mt-auto space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        Quantity
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8"
+                          onClick={() =>
+                            setQuantity(q => Math.max(1, q - 1))
+                          }>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-8 text-center font-medium">
+                          {quantity}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8"
+                          onClick={() => setQuantity(q => q + 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <span className="ml-auto font-semibold">
+                        {formatCurrency(selectedProduct.price * quantity)}
+                      </span>
+                    </div>
                     <Button
                       variant="hero"
                       className="w-full"
                       size="lg"
+                      onClick={() => {
+                        addToCart(selectedProduct, quantity);
+                        setSelectedProduct(null);
+                      }}>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Add to Cart
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
                       onClick={handleContactSeller}>
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Contact Seller to Buy
+                      Contact Seller
                     </Button>
                     <Button
                       variant="outline"
