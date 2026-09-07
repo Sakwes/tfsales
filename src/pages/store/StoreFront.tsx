@@ -36,6 +36,10 @@ interface Product {
   images: string[];
 }
 
+interface CartItem extends Product {
+  quantity: number;
+}
+
 interface StoreData {
   id: string;
   store_name: string;
