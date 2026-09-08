@@ -60,9 +60,16 @@ const Register = () => {
     setLoading(false);
 
     if (error) {
+      const raw = error.message || "";
+      const friendly = /already registered|already exists|User already/i.test(raw)
+        ? "An account with this email already exists. Try logging in instead."
+        : /rate|too many/i.test(raw)
+          ? "Too many attempts. Please wait a moment and try again."
+          : "We couldn't create your account right now. Please check your details and try again.";
+
       toast({
         title: "Registration Failed",
-        description: error.message || "Could not create account",
+        description: friendly,
         variant: "destructive"
       });
       return;
