@@ -54,6 +54,7 @@ import {
   Phone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { storeSlug, storeUrl } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 // import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -1078,9 +1079,9 @@ const AdminDashboard = () => {
               <p className="text-[10px] text-muted-foreground">
                 Only letters, numbers, and spaces are allowed.
               </p>
-              <p className="text-xs text-muted-foreground">
-                Store URL: {import.meta.env.VITE_STORE_URL}/store/
-                {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "store-name"}
+              <p className="text-xs text-muted-foreground break-all">
+                Store link:{" "}
+                {storeUrl({ store_name: editStoreName.trim() || "store name" })}
               </p>
             </div>
             <div className="space-y-2">
