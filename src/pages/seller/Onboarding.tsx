@@ -233,7 +233,7 @@ const Onboarding = () => {
                 <h3 className="font-semibold mb-2">Terms and Conditions</h3>
                 <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
                   <p>
-                    By creating a store on Sell Novas, you agree to:
+                    By creating a store on SellNova, you agree to:
                   </p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Sell only legal products and services</li>
@@ -242,12 +242,12 @@ const Onboarding = () => {
                     <li>Not engage in fraudulent or misleading activities</li>
                     <li>Comply with all applicable laws and regulations</li>
                     <li>
-                      Allow Sell Novas to display your store publicly
+                      Allow SellNova to display your store publicly
                     </li>
                     <li>Pay any applicable fees or commissions</li>
                   </ul>
                   <p className="mt-2">
-                    Sell Novas reserves the right to deactivate
+                    SellNova reserves the right to deactivate
                     stores that violate these terms.
                   </p>
                 </div>

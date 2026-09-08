@@ -568,7 +568,7 @@ const StoreFront = () => {
       {/* Footer */}
       <footer className="bg-card border-t py-8 px-4 sm:px-6 lg:px-8 mt-12">
         <div className="max-w-7xl mx-auto text-center text-muted-foreground">
-          <p className="mb-2">Powered by Sell Novas</p>
+          <p className="mb-2">Powered by SellNova</p>
           <p className="text-sm">
             To create your own store register{" "}
             <Link

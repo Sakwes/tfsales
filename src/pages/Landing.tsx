@@ -21,7 +21,7 @@ const Landing = () => {
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-8 animate-fade-in">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} alt="TechFusion Logo" className="h-24 w-24" />
+              <img src={logo} alt="SellNova logo" className="h-24 w-24" />
             </div>
           </div>
 
@@ -241,7 +241,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
             <img src={logo} className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold">Sell Novas</span>
+            <span className="text-xl font-bold">SellNova</span>
           </div>
           <p className="text-muted-foreground mb-4">
             Empowering sellers to build their online presence

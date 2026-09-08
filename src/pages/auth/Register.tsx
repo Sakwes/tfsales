@@ -167,7 +167,7 @@ const Register = () => {
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} className="h-8 w-8" alt="TechFusion Logo" />
+              <img src={logo} className="h-8 w-8" alt="SellNova logo" />
             </div>
           </div>
 

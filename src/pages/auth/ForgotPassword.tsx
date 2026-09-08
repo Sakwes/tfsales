@@ -113,7 +113,7 @@ const ForgotPassword = () => {
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} alt="TechFusion Logo" className="h-8 w-8" />
+              <img src={logo} alt="SellNova logo" className="h-8 w-8" />
             </div>
           </div>
 
