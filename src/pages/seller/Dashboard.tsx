@@ -590,9 +590,9 @@ const Dashboard = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm break-all">
-              {import.meta.env.VITE_STORE_URL}/store/
-              {store.store_name.toLowerCase().replace(/\s+/g, "-")}
+              {storeUrl(store)}
             </div>
+
             <Button
               variant="accent"
               onClick={copyStoreUrl}
