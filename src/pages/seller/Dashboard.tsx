@@ -452,7 +452,7 @@ const Dashboard = () => {
             <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
-                  <img src={logo} className="h-8 w-8 text-white" alt="" />
+                  <img src={logo} className="h-8 w-8" alt="SellNova logo" />
                 </div>
                 <div></div>
               </div>
@@ -508,7 +508,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
-                <img src={logo} className="h-8 w-8 text-white" alt="" />
+                <img src={logo} className="h-8 w-8" alt="SellNova logo" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">{store.store_name}</h1>
