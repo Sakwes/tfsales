@@ -532,7 +532,9 @@ const Dashboard = () => {
                   <span className="hidden md:flex">Analytics</span>
                 </Button>
               </Link>
-              {/* <RoleSwitcher /> */}
+              {/* eslint-disable-next-line */}
+              <RoleSwitcher />
+
               <Button
                 variant="ghost"
                 size="sm"
