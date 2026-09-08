@@ -35,6 +35,12 @@ import logo from "@/assets/logo.png";
 import { formatCurrency } from "@/lib/utils";
 import { isReservedStoreName } from "@/lib/constants";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import {
+  formatPhoneForDisplay,
+  isValidContactPhone,
+  storeSlug,
+  storeUrl
+} from "@/lib/store";
 
 interface Product {
   id: string;
@@ -47,8 +53,11 @@ interface Product {
 interface StoreData {
   id: string;
   store_name: string;
+  slug: string | null;
   contact_phone: string;
+  whatsapp_phone: string | null;
 }
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -130,24 +139,27 @@ const Dashboard = () => {
       .eq("role", "admin")
       .maybeSingle();
 
-    if (data) {
-      setIsAdmin(true);
-      navigate("/admin")
-    } else {
-      setIsAdmin(false);
+    // Dual-role users stay here and choose their view with the switcher.
+    setIsAdmin(!!data);
+  };
+
+  const copyStoreUrl = async () => {
+    if (!store) return;
+    try {
+      await navigator.clipboard.writeText(storeUrl(store));
+      toast({
+        title: "Link copied",
+        description: "Share your store link with customers"
+      });
+    } catch {
+      toast({
+        title: "Could not copy",
+        description: "Long-press the link above to copy it manually",
+        variant: "destructive"
+      });
     }
   };
 
-  const copyStoreUrl = () => {
-    const url = `${import.meta.env.VITE_STORE_URL}/store/${store?.store_name
-      ?.toLowerCase()
-      .replace(/\s+/g, "-")}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "URL Copied!",
-      description: "Share your store link with customers"
-    });
-  };
 
   const openEditStore = () => {
     if (!store) return;
@@ -171,10 +183,11 @@ const Dashboard = () => {
       return;
     }
 
-    if (editContactPhone.length < 10) {
-      toast({ title: "Invalid Phone Number", description: "Please enter a valid contact phone number", variant: "destructive" });
+    if (!isValidContactPhone(editContactPhone)) {
+      toast({ title: "Invalid Phone Number", description: "Enter a valid WhatsApp number, e.g. 08031234567", variant: "destructive" });
       return;
     }
+
 
     setSavingStore(true);
 
