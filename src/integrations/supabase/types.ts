@@ -102,19 +102,19 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
-          phone: string
+          phone: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
           id: string
-          phone: string
+          phone?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
           id?: string
-          phone?: string
+          phone?: string | null
         }
         Relationships: []
       }

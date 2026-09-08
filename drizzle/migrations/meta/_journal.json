@@ -8,6 +8,13 @@
       "when": 1788902716125,
       "tag": "0000_sellnova_release1_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788905167184,
+      "tag": "0001_email_first_signup_profiles",
+      "breakpoints": true
     }
   ]
 }
