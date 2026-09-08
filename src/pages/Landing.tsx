@@ -21,7 +21,7 @@ const Landing = () => {
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-8 animate-fade-in">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} alt="TechFusion Logo" className="h-24 w-24" />
+              <img src={logo} alt="SellNova logo" className="h-24 w-24" />
             </div>
           </div>
 
@@ -54,20 +54,18 @@ const Landing = () => {
             </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-3 gap-6 max-w-2xl mx-auto text-white">
-            <div className="animate-fade-in">
-              <div className="text-3xl font-bold">1000+</div>
-              <div className="text-sm text-white/80">Active Sellers</div>
-            </div>
-            <div className="animate-fade-in">
-              <div className="text-3xl font-bold">50K+</div>
-              <div className="text-sm text-white/80">Products Listed</div>
-            </div>
-            <div className="animate-fade-in">
-              <div className="text-3xl font-bold">200K+</div>
-              <div className="text-sm text-white/80">Monthly Visits</div>
-            </div>
-          </div>
+          <ul className="mt-12 grid gap-4 sm:grid-cols-3 max-w-3xl mx-auto text-white/90 text-sm">
+            <li className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-3">
+              Free to start — no card needed
+            </li>
+            <li className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-3">
+              Up to 12 products, 3 photos each
+            </li>
+            <li className="rounded-xl bg-white/10 backdrop-blur-sm px-4 py-3">
+              Orders arrive straight on WhatsApp
+            </li>
+          </ul>
+
         </div>
       </section>
 
@@ -114,9 +112,13 @@ const Landing = () => {
                 Shareable Store URL
               </h3>
               <p className="text-muted-foreground">
-                Get your unique store link (https://sellnova.com.ng
-                /yourstore) to share on WhatsApp, Facebook, and Instagram.
+                Get your unique store link (
+                <span className="whitespace-nowrap">
+                  sellnova.com.ng/store/yourstore
+                </span>
+                ) to share on WhatsApp, Facebook, and Instagram.
               </p>
+
             </Card>
 
             <Card className="p-6 shadow-card hover:shadow-glow transition-all duration-300 border-0">
@@ -147,9 +149,10 @@ const Landing = () => {
               </div>
               <h3 className="text-xl font-semibold mb-2">Secure & Reliable</h3>
               <p className="text-muted-foreground">
-                Your data is protected with SMS verification and secure
-                authentication. Sell with confidence.
+                Your account is protected with email verification and secure
+                sign-in. Sell with confidence.
               </p>
+
             </Card>
           </div>
         </div>
@@ -224,8 +227,9 @@ const Landing = () => {
             Ready to Launch Your Online Store?
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Join thousands of sellers already growing their business online
+            Set up your store today and start taking orders on WhatsApp.
           </p>
+
           <Link to="/auth/register">
             <Button
               size="lg"
@@ -240,8 +244,8 @@ const Landing = () => {
       <footer className="bg-card py-12 px-4 sm:px-6 lg:px-8 border-t">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center mb-4">
-            <img src={logo} className="h-8 w-8 text-primary mr-2" />
-            <span className="text-xl font-bold">Sell Novas</span>
+            <img src={logo} alt="SellNova logo" className="h-8 w-8 mr-2" />
+            <span className="text-xl font-bold">SellNova</span>
           </div>
           <p className="text-muted-foreground mb-4">
             Empowering sellers to build their online presence

@@ -1,8 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const PrivacyPolicy = () => {
+  useMetaTags({ title: "Privacy Policy | SellNova", description: "How SellNova collects, uses and protects your personal information." });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-8">

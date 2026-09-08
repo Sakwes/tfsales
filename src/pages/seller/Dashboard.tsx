@@ -35,6 +35,12 @@ import logo from "@/assets/logo.png";
 import { formatCurrency } from "@/lib/utils";
 import { isReservedStoreName } from "@/lib/constants";
 import { RoleSwitcher } from "@/components/RoleSwitcher";
+import {
+  formatPhoneForDisplay,
+  isValidContactPhone,
+  storeSlug,
+  storeUrl
+} from "@/lib/store";
 
 interface Product {
   id: string;
@@ -47,8 +53,11 @@ interface Product {
 interface StoreData {
   id: string;
   store_name: string;
+  slug: string | null;
   contact_phone: string;
+  whatsapp_phone: string | null;
 }
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -130,24 +139,27 @@ const Dashboard = () => {
       .eq("role", "admin")
       .maybeSingle();
 
-    if (data) {
-      setIsAdmin(true);
-      navigate("/admin")
-    } else {
-      setIsAdmin(false);
+    // Dual-role users stay here and choose their view with the switcher.
+    setIsAdmin(!!data);
+  };
+
+  const copyStoreUrl = async () => {
+    if (!store) return;
+    try {
+      await navigator.clipboard.writeText(storeUrl(store));
+      toast({
+        title: "Link copied",
+        description: "Share your store link with customers"
+      });
+    } catch {
+      toast({
+        title: "Could not copy",
+        description: "Long-press the link above to copy it manually",
+        variant: "destructive"
+      });
     }
   };
 
-  const copyStoreUrl = () => {
-    const url = `${import.meta.env.VITE_STORE_URL}/store/${store?.store_name
-      ?.toLowerCase()
-      .replace(/\s+/g, "-")}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "URL Copied!",
-      description: "Share your store link with customers"
-    });
-  };
 
   const openEditStore = () => {
     if (!store) return;
@@ -171,10 +183,11 @@ const Dashboard = () => {
       return;
     }
 
-    if (editContactPhone.length < 10) {
-      toast({ title: "Invalid Phone Number", description: "Please enter a valid contact phone number", variant: "destructive" });
+    if (!isValidContactPhone(editContactPhone)) {
+      toast({ title: "Invalid Phone Number", description: "Enter a valid WhatsApp number, e.g. 08031234567", variant: "destructive" });
       return;
     }
+
 
     setSavingStore(true);
 
@@ -211,16 +224,45 @@ const Dashboard = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (uploadedFiles.length + files.length > maxImagesPerProduct) {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    const maxBytes = 5 * 1024 * 1024;
+
+    if (uploadedFiles.length + productImages.length + files.length > maxImagesPerProduct) {
       toast({
         title: "Too Many Images",
         description: `Maximum ${maxImagesPerProduct} images per product`,
         variant: "destructive"
       });
+      e.target.value = "";
       return;
     }
+
+    const badType = files.find(f => !allowed.includes(f.type));
+    if (badType) {
+      toast({
+        title: "Unsupported Image",
+        description: "Please upload JPG, PNG or WebP photos only",
+        variant: "destructive"
+      });
+      e.target.value = "";
+      return;
+    }
+
+    const tooBig = files.find(f => f.size > maxBytes);
+    if (tooBig) {
+      toast({
+        title: "Image Too Large",
+        description: "Each photo must be smaller than 5MB",
+        variant: "destructive"
+      });
+      e.target.value = "";
+      return;
+    }
+
     setUploadedFiles([...uploadedFiles, ...files]);
+    e.target.value = "";
   };
+
 
   const removeFile = (index: number) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
@@ -410,7 +452,7 @@ const Dashboard = () => {
             <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
-                  <img src={logo} className="h-8 w-8 text-white" alt="" />
+                  <img src={logo} className="h-8 w-8" alt="SellNova logo" />
                 </div>
                 <div></div>
               </div>
@@ -466,7 +508,7 @@ const Dashboard = () => {
           <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
-                <img src={logo} className="h-8 w-8 text-white" alt="" />
+                <img src={logo} className="h-8 w-8" alt="SellNova logo" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">{store.store_name}</h1>
@@ -490,7 +532,9 @@ const Dashboard = () => {
                   <span className="hidden md:flex">Analytics</span>
                 </Button>
               </Link>
-              {/* <RoleSwitcher /> */}
+              <RoleSwitcher />
+
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -523,9 +567,16 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <div className="text-right text-xs text-white">
                 <p className="flex items-center gap-1 justify-end">
-                  <Phone className="h-3 w-3" />
-                  {store.contact_phone}
+                  <Phone className="h-3 w-3" aria-hidden="true" />
+                  {formatPhoneForDisplay(store.whatsapp_phone || store.contact_phone)}
                 </p>
+                {user?.email && (
+                  <p className="flex items-center gap-1 justify-end text-white/80 mt-0.5">
+                    <Mail className="h-3 w-3" aria-hidden="true" />
+                    {user.email}
+                  </p>
+                )}
+
               </div>
               <Button
                 variant="outline"
@@ -539,9 +590,9 @@ const Dashboard = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-3 font-mono text-sm break-all">
-              {import.meta.env.VITE_STORE_URL}/store/
-              {store.store_name.toLowerCase().replace(/\s+/g, "-")}
+              {storeUrl(store)}
             </div>
+
             <Button
               variant="accent"
               onClick={copyStoreUrl}
@@ -550,9 +601,8 @@ const Dashboard = () => {
               Copy Link
             </Button>
             <Link
-              to={`/store/${store.store_name
-                .toLowerCase()
-                .replace(/\s+/g, "-")}`}
+              to={`/store/${storeSlug(store)}`}
+
               target="_blank">
               <Button
                 variant="outline"
@@ -801,10 +851,11 @@ const Dashboard = () => {
                 <p className="text-[10px] text-muted-foreground">
                   Only letters, numbers, and spaces are allowed.
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Store URL: {import.meta.env.VITE_STORE_URL}/store/
-                  {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
+                <p className="text-xs text-muted-foreground break-all">
+                  Store link:{" "}
+                  {storeUrl({ store_name: editStoreName.trim() || "your store name" })}
                 </p>
+
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editContactPhone">Contact Phone</Label>

@@ -54,6 +54,7 @@ import {
   Phone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { storeSlug, storeUrl } from "@/lib/store";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 // import { RoleSwitcher } from "@/components/RoleSwitcher";
@@ -794,14 +795,16 @@ const AdminDashboard = () => {
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Link
-                            to={`/store/${seller.store_name
-                              .toLowerCase()
-                              .replace(/\s+/g, "-")}`}
+                            to={`/store/${storeSlug(seller)}`}
                             target="_blank">
-                            <Button size="sm" variant="outline">
-                              <ExternalLink className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-label={`Open ${seller.store_name} storefront`}>
+                              <ExternalLink className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           </Link>
+
                           <Button
                             size="sm"
                             variant={
@@ -1078,9 +1081,9 @@ const AdminDashboard = () => {
               <p className="text-[10px] text-muted-foreground">
                 Only letters, numbers, and spaces are allowed.
               </p>
-              <p className="text-xs text-muted-foreground">
-                Store URL: {import.meta.env.VITE_STORE_URL}/store/
-                {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "store-name"}
+              <p className="text-xs text-muted-foreground break-all">
+                Store link:{" "}
+                {storeUrl({ store_name: editStoreName.trim() || "store name" })}
               </p>
             </div>
             <div className="space-y-2">

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { isReservedStoreName } from "@/lib/constants";
+import { isValidContactPhone, storeUrl } from "@/lib/store";
 import logo from "@/assets/logo.png";
 
 const Onboarding = () => {
@@ -21,8 +22,6 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
-
-  console.log("The user info is ", user);
 
   useEffect(() => {
     async function checkStore() {
@@ -71,10 +70,10 @@ const Onboarding = () => {
       return;
     }
 
-    if (contactPhone.length < 10) {
+    if (!isValidContactPhone(contactPhone)) {
       toast({
         title: "Invalid Phone Number",
-        description: "Please enter a valid contact phone number",
+        description: "Enter a valid WhatsApp number, e.g. 08031234567",
         variant: "destructive"
       });
       return;
@@ -140,7 +139,7 @@ const Onboarding = () => {
           <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white rounded-xl shrink-0 p-3 border border-gray-100">
-                <img src={logo} className="h-8 w-8 text-white" alt="" />
+                <img src={logo} className="h-8 w-8" alt="SellNova logo" />
               </div>
               <div></div>
             </div>
@@ -175,7 +174,7 @@ const Onboarding = () => {
           <Card className="p-8 shadow-card animate-fade-in">
             <div className="flex items-center justify-center mb-6">
               <div className="bg-white p-3 rounded-xl">
-                <img src={logo} className="h-8 w-8 text-white" alt="" />
+                <img src={logo} className="h-8 w-8" alt="SellNova logo" />
               </div>
             </div>
 
@@ -203,10 +202,9 @@ const Onboarding = () => {
                 <p className="text-[10px] text-muted-foreground">
                   Only letters, numbers, and spaces are allowed.
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Your store URL:{" "}
-                  {import.meta.env.VITE_STORE_URL}/store/
-                  {storeName.toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
+                <p className="text-xs text-muted-foreground break-all">
+                  Your store link:{" "}
+                  {storeUrl({ store_name: storeName.trim() || "your store name" })}
                 </p>
               </div>
 
@@ -225,7 +223,9 @@ const Onboarding = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Customers will use this to contact you
+                  This is the WhatsApp number customers will use to order from
+                  you. Nigerian numbers starting with 0 are saved as 234
+                  automatically.
                 </p>
               </div>
 
@@ -233,7 +233,7 @@ const Onboarding = () => {
                 <h3 className="font-semibold mb-2">Terms and Conditions</h3>
                 <div className="text-sm text-muted-foreground space-y-2 max-h-40 overflow-y-auto mb-4">
                   <p>
-                    By creating a store on Sell Novas, you agree to:
+                    By creating a store on SellNova, you agree to:
                   </p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Sell only legal products and services</li>
@@ -242,12 +242,12 @@ const Onboarding = () => {
                     <li>Not engage in fraudulent or misleading activities</li>
                     <li>Comply with all applicable laws and regulations</li>
                     <li>
-                      Allow Sell Novas to display your store publicly
+                      Allow SellNova to display your store publicly
                     </li>
                     <li>Pay any applicable fees or commissions</li>
                   </ul>
                   <p className="mt-2">
-                    Sell Novas reserves the right to deactivate
+                    SellNova reserves the right to deactivate
                     stores that violate these terms.
                   </p>
                 </div>

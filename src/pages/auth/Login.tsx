@@ -8,8 +8,11 @@ import { ArrowLeft, Mail, Lock, Eye, EyeClosed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const Login = () => {
+  useMetaTags({ title: "Sign in to SellNova", description: "Sign in to your SellNova seller account to manage your store and products." });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -95,7 +98,7 @@ const Login = () => {
         <Card className="p-8 shadow-glow animate-fade-in">
           <div className="flex items-center justify-center mb-6">
             <div className="bg-white p-3 rounded-xl">
-              <img src={logo} alt="TechFusion Logo" className="h-8 w-8" />
+              <img src={logo} alt="SellNova logo" className="h-8 w-8" />
             </div>
           </div>
 

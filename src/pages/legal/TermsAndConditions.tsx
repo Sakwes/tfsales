@@ -1,8 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const TermsAndConditions = () => {
+  useMetaTags({ title: "Terms and Conditions | SellNova", description: "The terms that govern the use of SellNova by sellers and shoppers." });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -20,14 +23,14 @@ const TermsAndConditions = () => {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground mb-4">
-              By accessing and using Sell Novas ("the Platform"), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.
+              By accessing and using SellNova ("the Platform"), you accept and agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">2. Description of Service</h2>
             <p className="text-muted-foreground mb-4">
-              Sell Novas provides an online platform that enables users ("Sellers") to create and manage their own e-commerce stores. The Platform allows Sellers to:
+              SellNova provides an online platform that enables users ("Sellers") to create and manage their own e-commerce stores. The Platform allows Sellers to:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Create a personalized online storefront</li>
@@ -98,7 +101,7 @@ const TermsAndConditions = () => {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">8. Limitation of Liability</h2>
             <p className="text-muted-foreground mb-4">
-              Sell Novas is not responsible for:
+              SellNova is not responsible for:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Transactions between Sellers and their customers</li>

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788902716125,
+      "tag": "0000_sellnova_release1_integrity",
+      "breakpoints": true
+    }
+  ]
+}

@@ -2,8 +2,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const Support = () => {
+  useMetaTags({ title: "Support | SellNova", description: "Get help with your SellNova store, account or shareable store link." });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-8">

@@ -75,7 +75,18 @@ export const useMetaTags = (config: MetaTagsConfig) => {
 
     if (url) {
       updateMeta("og:url", url);
+
+      let canonical = document.querySelector(
+        'link[rel="canonical"]'
+      ) as HTMLLinkElement | null;
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", url);
     }
+
 
     if (type) {
       updateMeta("og:type", type);
@@ -83,7 +94,7 @@ export const useMetaTags = (config: MetaTagsConfig) => {
 
     // Cleanup function to reset meta tags
     return () => {
-      document.title = "Sell Novas - Create Your Online Store in Minutes";
+      document.title = "SellNova - Create Your Online Store in Minutes";
     };
   }, [config.title, config.description, config.image, config.url, config.type, config.phone, config.storeName]);
 };
