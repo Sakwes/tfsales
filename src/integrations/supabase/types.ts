@@ -157,8 +157,10 @@ export type Database = {
           id: string
           is_active: boolean
           seller_id: string
+          slug: string | null
           store_name: string
           updated_at: string
+          whatsapp_phone: string | null
         }
         Insert: {
           contact_phone: string
@@ -166,8 +168,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           seller_id: string
+          slug?: string | null
           store_name: string
           updated_at?: string
+          whatsapp_phone?: string | null
         }
         Update: {
           contact_phone?: string
@@ -175,8 +179,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           seller_id?: string
+          slug?: string | null
           store_name?: string
           updated_at?: string
+          whatsapp_phone?: string | null
         }
         Relationships: [
           {
@@ -230,6 +236,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      sellnova_normalize_phone: { Args: { _input: string }; Returns: string }
+      sellnova_slugify: { Args: { _input: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "seller"
