@@ -532,8 +532,8 @@ const Dashboard = () => {
                   <span className="hidden md:flex">Analytics</span>
                 </Button>
               </Link>
-              {/* eslint-disable-next-line */}
               <RoleSwitcher />
+
 
               <Button
                 variant="ghost"
@@ -567,9 +567,16 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <div className="text-right text-xs text-white">
                 <p className="flex items-center gap-1 justify-end">
-                  <Phone className="h-3 w-3" />
-                  {store.contact_phone}
+                  <Phone className="h-3 w-3" aria-hidden="true" />
+                  {formatPhoneForDisplay(store.whatsapp_phone || store.contact_phone)}
                 </p>
+                {user?.email && (
+                  <p className="flex items-center gap-1 justify-end text-white/80 mt-0.5">
+                    <Mail className="h-3 w-3" aria-hidden="true" />
+                    {user.email}
+                  </p>
+                )}
+
               </div>
               <Button
                 variant="outline"
