@@ -795,14 +795,16 @@ const AdminDashboard = () => {
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Link
-                            to={`/store/${seller.store_name
-                              .toLowerCase()
-                              .replace(/\s+/g, "-")}`}
+                            to={`/store/${storeSlug(seller)}`}
                             target="_blank">
-                            <Button size="sm" variant="outline">
-                              <ExternalLink className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-label={`Open ${seller.store_name} storefront`}>
+                              <ExternalLink className="h-4 w-4" aria-hidden="true" />
                             </Button>
                           </Link>
+
                           <Button
                             size="sm"
                             variant={
