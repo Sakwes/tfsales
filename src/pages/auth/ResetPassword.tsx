@@ -8,8 +8,11 @@ import { Lock, CheckCircle, Eye, EyeClosed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const ResetPassword = () => {
+  useMetaTags({ title: "Set a new SellNova password", description: "Choose a new password for your SellNova seller account." });
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);

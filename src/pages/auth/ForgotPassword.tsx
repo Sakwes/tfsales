@@ -8,8 +8,11 @@ import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const ForgotPassword = () => {
+  useMetaTags({ title: "Reset your SellNova password", description: "Request a password reset link for your SellNova seller account." });
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);

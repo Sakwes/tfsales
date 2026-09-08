@@ -8,8 +8,11 @@ import { ArrowLeft, Mail, Lock, Eye, EyeClosed, CheckCircle, RefreshCw } from "l
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const Register = () => {
+  useMetaTags({ title: "Create your free SellNova account", description: "Sign up free and launch your online store in minutes. Sell on WhatsApp, Facebook and Instagram." });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

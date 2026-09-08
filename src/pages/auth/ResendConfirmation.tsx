@@ -8,8 +8,11 @@ import { ArrowLeft, Mail, CheckCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const ResendConfirmation = () => {
+  useMetaTags({ title: "Resend your SellNova confirmation email", description: "Request a new confirmation email for your SellNova account." });
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);

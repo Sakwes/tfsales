@@ -1,8 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useMetaTags } from "@/hooks/use-meta-tags";
 
 const TermsAndConditions = () => {
+  useMetaTags({ title: "Terms and Conditions | SellNova", description: "The terms that govern the use of SellNova by sellers and shoppers." });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-8">
