@@ -601,9 +601,8 @@ const Dashboard = () => {
               Copy Link
             </Button>
             <Link
-              to={`/store/${store.store_name
-                .toLowerCase()
-                .replace(/\s+/g, "-")}`}
+              to={`/store/${storeSlug(store)}`}
+
               target="_blank">
               <Button
                 variant="outline"
@@ -852,10 +851,11 @@ const Dashboard = () => {
                 <p className="text-[10px] text-muted-foreground">
                   Only letters, numbers, and spaces are allowed.
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Store URL: {import.meta.env.VITE_STORE_URL}/store/
-                  {editStoreName.trim().toLowerCase().replace(/\s+/g, "-") || "your-store-name"}
+                <p className="text-xs text-muted-foreground break-all">
+                  Store link:{" "}
+                  {storeUrl({ store_name: editStoreName.trim() || "your store name" })}
                 </p>
+
               </div>
               <div className="space-y-2">
                 <Label htmlFor="editContactPhone">Contact Phone</Label>
