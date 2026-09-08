@@ -75,7 +75,18 @@ export const useMetaTags = (config: MetaTagsConfig) => {
 
     if (url) {
       updateMeta("og:url", url);
+
+      let canonical = document.querySelector(
+        'link[rel="canonical"]'
+      ) as HTMLLinkElement | null;
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.setAttribute("rel", "canonical");
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute("href", url);
     }
+
 
     if (type) {
       updateMeta("og:type", type);
