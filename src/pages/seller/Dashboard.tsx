@@ -224,16 +224,45 @@ const Dashboard = () => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (uploadedFiles.length + files.length > maxImagesPerProduct) {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    const maxBytes = 5 * 1024 * 1024;
+
+    if (uploadedFiles.length + productImages.length + files.length > maxImagesPerProduct) {
       toast({
         title: "Too Many Images",
         description: `Maximum ${maxImagesPerProduct} images per product`,
         variant: "destructive"
       });
+      e.target.value = "";
       return;
     }
+
+    const badType = files.find(f => !allowed.includes(f.type));
+    if (badType) {
+      toast({
+        title: "Unsupported Image",
+        description: "Please upload JPG, PNG or WebP photos only",
+        variant: "destructive"
+      });
+      e.target.value = "";
+      return;
+    }
+
+    const tooBig = files.find(f => f.size > maxBytes);
+    if (tooBig) {
+      toast({
+        title: "Image Too Large",
+        description: "Each photo must be smaller than 5MB",
+        variant: "destructive"
+      });
+      e.target.value = "";
+      return;
+    }
+
     setUploadedFiles([...uploadedFiles, ...files]);
+    e.target.value = "";
   };
+
 
   const removeFile = (index: number) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
