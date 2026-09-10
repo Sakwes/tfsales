@@ -757,6 +757,39 @@ export type Database = {
         }
         Returns: boolean
       }
+      sellnova_create_order: {
+        Args: {
+          _coupon?: string
+          _customer_name: string
+          _customer_note: string
+          _customer_phone: string
+          _delivery_address: string
+          _items: Json
+          _store_id: string
+        }
+        Returns: Json
+      }
+      sellnova_decide_subscription: {
+        Args: {
+          _approve: boolean
+          _duration_days?: number
+          _reason?: string
+          _request_id: string
+        }
+        Returns: Json
+      }
+      sellnova_discount_for: {
+        Args: {
+          _coupon: string
+          _items: Json
+          _store_id: string
+          _subtotal: number
+        }
+        Returns: {
+          discount: number
+          promotion_id: string
+        }[]
+      }
       sellnova_effective_plan: {
         Args: { _store_id: string }
         Returns: {
@@ -786,10 +819,24 @@ export type Database = {
         }
       }
       sellnova_normalize_phone: { Args: { _input: string }; Returns: string }
+      sellnova_review_context: { Args: { _token: string }; Returns: Json }
+      sellnova_set_subscription_state: {
+        Args: {
+          _extend_days?: number
+          _reason?: string
+          _status: string
+          _store_id: string
+        }
+        Returns: Json
+      }
       sellnova_slugify: { Args: { _input: string }; Returns: string }
       sellnova_store_max_products: {
         Args: { _store_id: string }
         Returns: number
+      }
+      sellnova_submit_review: {
+        Args: { _comment: string; _rating: number; _token: string }
+        Returns: Json
       }
     }
     Enums: {
