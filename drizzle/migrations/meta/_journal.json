@@ -15,6 +15,13 @@
       "when": 1788905167184,
       "tag": "0001_email_first_signup_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789078364026,
+      "tag": "0002_sellnova_release2_foundation",
+      "breakpoints": true
     }
   ]
 }
