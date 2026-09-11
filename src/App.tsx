@@ -16,6 +16,7 @@ import ResendConfirmation from "./pages/auth/ResendConfirmation";
 import Onboarding from "./pages/seller/Onboarding";
 import Dashboard from "./pages/seller/Dashboard";
 import Analytics from "./pages/seller/Analytics";
+import SubscriptionPage from "./pages/seller/Subscription";
 import StoreFront from "./pages/store/StoreFront";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -53,6 +54,11 @@ const App = () => (
             <Route path="/seller/analytics" element={
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/seller/subscription" element={
+              <ProtectedRoute>
+                <SubscriptionPage />
               </ProtectedRoute>
             } />
             <Route path="/terms" element={<TermsAndConditions />} />

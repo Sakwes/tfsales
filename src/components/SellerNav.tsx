@@ -1,22 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  BarChart3,
-  ClipboardList,
-  CreditCard,
-  Percent,
-  Star,
-  Palette
-} from "lucide-react";
+import { LayoutDashboard, BarChart3, CreditCard } from "lucide-react";
 
 const links = [
   { to: "/seller/dashboard", label: "Products", icon: LayoutDashboard },
-  { to: "/seller/orders", label: "Orders", icon: ClipboardList },
   { to: "/seller/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/seller/promotions", label: "Discounts", icon: Percent },
-  { to: "/seller/reviews", label: "Reviews", icon: Star },
-  { to: "/seller/branding", label: "Branding", icon: Palette },
   { to: "/seller/subscription", label: "Plan", icon: CreditCard }
 ];
 
