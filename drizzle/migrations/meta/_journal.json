@@ -36,6 +36,13 @@
       "when": 1789163605862,
       "tag": "0004_release2_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789251340086,
+      "tag": "0005_release2_stock_branding_entitlements",
+      "breakpoints": true
     }
   ]
 }
