@@ -17,6 +17,7 @@ import Onboarding from "./pages/seller/Onboarding";
 import Dashboard from "./pages/seller/Dashboard";
 import Analytics from "./pages/seller/Analytics";
 import SubscriptionPage from "./pages/seller/Subscription";
+import BrandingPage from "./pages/seller/Branding";
 import StoreFront from "./pages/store/StoreFront";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";

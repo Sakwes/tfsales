@@ -96,10 +96,8 @@ const BrandingPage = () => {
     ]);
 
     const plan = effectivePlan(plans, sub);
-    setAllowed(plan.allow_branding && (isEntitled(sub) || plan.code === "free" ? plan.allow_branding : false));
-    setStatusLabel(
-      isEntitled(sub) ? `${plan.name} plan` : sub ? `${plan.name} plan` : "Free plan"
-    );
+    setAllowed(plan.allow_branding);
+    setStatusLabel(`${plan.name} plan`);
 
     const b = branding.data as BrandingValues | null;
     if (b) {
