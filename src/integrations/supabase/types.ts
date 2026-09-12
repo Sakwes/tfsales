@@ -819,6 +819,7 @@ export type Database = {
         }
       }
       sellnova_normalize_phone: { Args: { _input: string }; Returns: string }
+      sellnova_public_branding: { Args: { _store_id: string }; Returns: Json }
       sellnova_review_context: { Args: { _token: string }; Returns: Json }
       sellnova_set_subscription_state: {
         Args: {
