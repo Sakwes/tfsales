@@ -18,6 +18,10 @@ import Dashboard from "./pages/seller/Dashboard";
 import Analytics from "./pages/seller/Analytics";
 import SubscriptionPage from "./pages/seller/Subscription";
 import BrandingPage from "./pages/seller/Branding";
+import OrdersPage from "./pages/seller/Orders";
+import ReviewsPage from "./pages/seller/Reviews";
+import PromotionsPage from "./pages/seller/Promotions";
+import ReviewPage from "./pages/store/ReviewPage";
 import StoreFront from "./pages/store/StoreFront";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -62,6 +66,11 @@ const App = () => (
                 <SubscriptionPage />
               </ProtectedRoute>
             } />
+            <Route path="/seller/branding" element={<ProtectedRoute><BrandingPage /></ProtectedRoute>} />
+            <Route path="/seller/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+            <Route path="/seller/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
+            <Route path="/seller/promotions" element={<ProtectedRoute><PromotionsPage /></ProtectedRoute>} />
+            <Route path="/review/:token" element={<ReviewPage />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/support" element={<Support />} />

@@ -327,7 +327,7 @@ const AdminDashboard = () => {
       }
 
       const sellersData = await Promise.all(
-        stores.map(async (store: any) => {
+        stores.map(async (store) => {
           const { count: productsCount } = await supabase
             .from("products")
             .select("*", { count: "exact", head: true })

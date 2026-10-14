@@ -1,3 +1,4 @@
+import { SellerNav } from "@/components/SellerNav";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -362,10 +363,10 @@ const Dashboard = () => {
 
       resetForm();
       await loadStoreAndProducts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Could not save product",
+        description: error instanceof Error ? error.message : "Could not save product",
         variant: "destructive"
       });
     } finally {
@@ -476,6 +477,7 @@ const Dashboard = () => {
             </div>
           </div>
         </header>
+      <SellerNav />
         <div className="h-full flex-grow flex justify-center items-center p-4">
           <Card className="p-8 text-center">
             <Store className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -553,6 +555,7 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
+      <SellerNav />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Store URL Card */}

@@ -1,3 +1,4 @@
+import { SellerNav } from "@/components/SellerNav";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -163,6 +164,7 @@ const Onboarding = () => {
           </div>
         </div>
       </header>
+      <SellerNav />
       <div className="flex-grow h-full p-4 flex items-center justify-center">
         <div className="w-full max-w-2xl pb-10">
           <Link

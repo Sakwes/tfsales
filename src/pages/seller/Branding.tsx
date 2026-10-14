@@ -38,9 +38,9 @@ const BrandingPage = () => {
   const [allowed, setAllowed] = useState(false);
   const [statusLabel, setStatusLabel] = useState("Free plan");
 
-  const [primary, setPrimary] = useState(DEFAULT_BRANDING.primary_color);
-  const [accent, setAccent] = useState(DEFAULT_BRANDING.accent_color);
-  const [background, setBackground] = useState(DEFAULT_BRANDING.background_color);
+  const [primary, setPrimary] = useState<string>(DEFAULT_BRANDING.primary_color);
+  const [accent, setAccent] = useState<string>(DEFAULT_BRANDING.accent_color);
+  const [background, setBackground] = useState<string>(DEFAULT_BRANDING.background_color);
   const [useBackground, setUseBackground] = useState(false);
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);

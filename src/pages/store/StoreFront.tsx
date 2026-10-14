@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { CheckoutDialog } from "@/components/store/CheckoutDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -78,7 +79,14 @@ const StoreFront = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartStoreId, setCartStoreId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+  const [checkoutAttempt, setCheckoutAttempt] = useState(0);
+  const [hasReceipt, setHasReceipt] = useState(false);
+
+  const loadedStoreId = store?.id;
 
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -175,23 +183,28 @@ const StoreFront = () => {
 
   // Restore the cart for this store.
   useEffect(() => {
-    if (!store) return;
+    if (!loadedStoreId) return;
+    setCartStoreId(null);
+    setCheckoutOpen(false);
+    setHasReceipt(false);
+    setCheckoutItems([]);
     try {
-      const saved = localStorage.getItem(cartKey(store.id));
+      const saved = localStorage.getItem(cartKey(loadedStoreId));
       setCart(saved ? (JSON.parse(saved) as CartItem[]) : []);
     } catch {
       setCart([]);
     }
-  }, [store?.id]);
+    setCartStoreId(loadedStoreId);
+  }, [loadedStoreId]);
 
   useEffect(() => {
-    if (!store) return;
+    if (!loadedStoreId || cartStoreId !== loadedStoreId) return;
     try {
-      localStorage.setItem(cartKey(store.id), JSON.stringify(cart));
+      localStorage.setItem(cartKey(loadedStoreId), JSON.stringify(cart));
     } catch {
       /* storage unavailable — cart stays in memory */
     }
-  }, [cart, store?.id]);
+  }, [cart, loadedStoreId, cartStoreId]);
 
   // Structured data for search engines.
   useEffect(() => {
@@ -254,23 +267,15 @@ const StoreFront = () => {
 
   const handleSendOrder = () => {
     if (!store || cart.length === 0) return;
-    const lines = cart.map(
-      i =>
-        `• ${i.name} — ${i.quantity} x ${formatCurrency(
-          i.price
-        )} = ${formatCurrency(i.price * i.quantity)}`
-    );
-    const message = [
-      `Hello ${store.store_name}, I would like to place an order from your SellNova store.`,
-      "",
-      ...lines,
-      "",
-      `Total: ${formatCurrency(cartTotal)}`,
-      `Items: ${cartCount}`,
-      "",
-      canonicalUrl
-    ].join("\n");
-    window.open(whatsAppLink(whatsappNumber, message), "_blank", "noopener");
+    const selection = (items: CartItem[]) => JSON.stringify(items.map(item => [item.id, item.quantity]));
+    // Reopening an unchanged checkout preserves its in-flight/saved guard and buyer details.
+    if (hasReceipt || selection(cart) !== selection(checkoutItems)) {
+      setCheckoutItems(cart.map(item => ({ ...item })));
+      setCheckoutAttempt(attempt => attempt + 1);
+      setHasReceipt(false);
+    }
+    setCartOpen(false);
+    setCheckoutOpen(true);
   };
 
   const handleContactSeller = () => {
@@ -452,6 +457,18 @@ const StoreFront = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24 sm:pb-0">
+      {store && <CheckoutDialog
+        key={`${store.id}:${checkoutAttempt}`}
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        storeId={store.id}
+        storeName={store.store_name}
+        sellerPhone={whatsappNumber}
+        storeUrl={canonicalUrl}
+        items={checkoutItems}
+        onSaved={() => { setCart([]); setHasReceipt(true); }}
+      />}
+      {hasReceipt && <div className="p-3 text-center border-b"><Button variant="outline" onClick={() => setCheckoutOpen(true)}>View saved order</Button></div>}
       <header className="bg-gradient-primary text-white py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-5">
