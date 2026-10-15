@@ -1,0 +1,61 @@
+{
+  "project_ref": "qfcnaceeppgrquoszkor",
+  "files": [
+    {
+      "path": "supabase/migrations/20251029190315_1f320370-b591-4676-8b0c-4bef83e736cc.sql",
+      "sha256": "513ccef23a7d7c052b7dc722065385254e26a25f41c7d64f47060cd6df7c9bc1"
+    },
+    {
+      "path": "supabase/migrations/20260104115039_c5cc966a-8124-4d6f-89ab-b50b796bc7ce.sql",
+      "sha256": "ad59581e803f34aff269852114b3d2412305f30414dea63fe129ae32028efff5"
+    },
+    {
+      "path": "drizzle/migrations/0000_sellnova_release1_integrity.sql",
+      "sha256": "735ff0b619400473d6f0d53a3024f08b95aab2fa37c2ac64f858f542ec1f0804"
+    },
+    {
+      "path": "drizzle/migrations/0001_email_first_signup_profiles.sql",
+      "sha256": "d13eadbc6898af285a20b729f2cdf2b6e96976728088405e2d7d6058c0534542"
+    },
+    {
+      "path": "drizzle/migrations/0002_sellnova_release2_foundation.sql",
+      "sha256": "d8d6c574427bd2523e1e3b5af2ddfc881f029b29490c267a285c8348d5eebbbd"
+    },
+    {
+      "path": "drizzle/migrations/0003_sellnova_release2_checkout_rpcs.sql",
+      "sha256": "7a403357464d3ced1e622cdded44bbfedf3b4fbd8ea645e4dc283780856c788b"
+    },
+    {
+      "path": "drizzle/migrations/0004_release2_storage_policies.sql",
+      "sha256": "227aa791ec6e9161d1c7ff5513be3904bdf678c2c9ad8decf1fee3201731fbb8"
+    },
+    {
+      "path": "drizzle/migrations/0005_release2_stock_branding_entitlements.sql",
+      "sha256": "bc39c5ddc2e2f5febad5e8bb22bef8e20dc84240f34d223ea0d495289d4ae759"
+    },
+    {
+      "path": "database/development/corrections/001_order_integrity.sql",
+      "sha256": "0425ffd6bacf26a12a458a936a7a42381267f8713e8c11a89a7d17c52ddd8737"
+    },
+    {
+      "path": "database/development/corrections/002_checkout.sql",
+      "sha256": "a6962b4f3b2716709d1a802459a36f0a75eb4d75ba2c7b33fcf775ff76b97b33"
+    },
+    {
+      "path": "database/development/corrections/003_permissions_rls.sql",
+      "sha256": "9a505af37bdfd7346d3aa4d9b71a8245940d17030f1795e04034e130b027642f"
+    },
+    {
+      "path": "database/development/seeds/001_plans.sql",
+      "sha256": "6b7568c1cebdddbc2c1f45a3c29caa3c59a6b280e3c0b49a63d6573347fa3fc1"
+    },
+    {
+      "path": "database/development/seeds/002_storage.sql",
+      "sha256": "630662ec66bbba8c5bcdcfa645df9be7f8ecdc6a545f759052754ebae37b3f3a"
+    },
+    {
+      "path": "database/development/tests/postflight.sql",
+      "sha256": "9bb0564d8000f6a1358a03113897f3fbe7d6be33e7b192c54c47c1817573cbe4"
+    }
+  ]
+}
