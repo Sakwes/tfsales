@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   normalizeWhatsAppNumber,
   whatsAppLink,
 } from "@/lib/store";
+import { checkoutRequest, completeCheckout } from "@/lib/checkoutRequest";
 import { formatCurrency } from "@/lib/utils";
 
 // Only the database decides product prices, discounts, totals and references.
@@ -45,7 +46,7 @@ interface Props {
   sellerPhone: string;
   storeUrl: string;
   items: { id: string; quantity: number }[];
-  onSaved: () => void;
+  onSaved: () => boolean;
 }
 
 export function CheckoutDialog({
@@ -58,10 +59,35 @@ export function CheckoutDialog({
   items,
   onSaved,
 }: Props) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [note, setNote] = useState("");
+  const draftKey = `sellnova:buyer-draft:${storeId}`;
+  const [buyer, setBuyer] = useState(() => {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(draftKey) || "null");
+      if (
+        value &&
+        [value.name, value.phone, value.address, value.note].every(
+          (v) => typeof v === "string",
+        )
+      )
+        return value as {
+          name: string;
+          phone: string;
+          address: string;
+          note: string;
+        };
+    } catch {
+      /* Storage failure is handled before submitting. */
+    }
+    return { name: "", phone: "", address: "", note: "" };
+  });
+  const { name, phone, address, note } = buyer;
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(buyer));
+    } catch {
+      /* fail closed on submit */
+    }
+  }, [buyer, draftKey]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<z.infer<typeof receiptSchema> | null>(
@@ -94,12 +120,9 @@ export function CheckoutDialog({
     inFlight.current = true;
     setSaving(true);
     setError("");
+    let sent = false;
     try {
-      const {
-        data,
-        error: rpcError,
-        status,
-      } = await supabase.rpc("sellnova_create_order", {
+      const payload = {
         _store_id: storeId,
         _customer_name: name.trim(),
         _customer_phone: normalizeWhatsAppNumber(phone),
@@ -109,29 +132,38 @@ export function CheckoutDialog({
           product_id: item.id,
           quantity: item.quantity,
         })),
-      });
+      };
+      const request = await checkoutRequest(payload);
+      // Refuse to send if buyer details cannot survive a tab refresh.
+      sessionStorage.setItem(draftKey, JSON.stringify(buyer));
+      sent = true;
+      const {
+        data,
+        error: rpcError,
+        status,
+      } = await supabase
+        .rpc("sellnova_create_order", {
+          ...payload,
+          _request_id: request.id,
+        })
+        .abortSignal(AbortSignal.timeout(20_000));
       if (rpcError) {
-        if (status === 0 || status >= 500) {
-          saved.current = true;
-          setError(
-            "We could not confirm whether your order was saved. Please contact the seller before starting another checkout to avoid a duplicate order.",
-          );
-          return;
-        }
         setError(
-          `Could not save your order: ${rpcError.message}. Your cart has been kept. WhatsApp has not been opened.`,
+          status === 0 || status >= 500
+            ? "We could not confirm whether your order was saved. Retry with the same details to recover the same order. Changing details starts a different request."
+            : `Could not save your order: ${rpcError.message}. Your cart has been kept. WhatsApp has not been opened.`,
         );
         return;
       }
-      // Even an unexpected success response must never trigger a second insert.
-      saved.current = true;
+      // Only a valid database receipt is an acknowledged save. Retries retain the UUID.
       const result = receiptSchema.safeParse(data);
       if (!result.success) {
         setError(
-          "The server accepted your order but returned an invalid receipt. Do not submit it again; contact the seller to confirm your order.",
+          "The server returned an invalid receipt. Retry with the same details to recover the order; WhatsApp has not been opened.",
         );
         return;
       }
+      saved.current = true;
       const order = result.data;
       setReceipt(order);
       const message = [
@@ -153,17 +185,30 @@ export function CheckoutDialog({
       ].join("\n");
       const url = whatsAppLink(sellerPhone, message);
       setMessageUrl(url);
-      onSaved();
+      const cartCleared = onSaved();
+      if (cartCleared) {
+        try {
+          completeCheckout(request);
+          sessionStorage.removeItem(draftKey);
+        } catch {
+          /* retain old UUID rather than risk duplicate writes */
+        }
+      }
       // Browsers may block async popups. The receipt always keeps a usable link.
       try {
         window.open(url, "_blank", "noopener,noreferrer");
       } catch {
         /* use the receipt link */
       }
-    } catch {
-      saved.current = true;
+    } catch (failure) {
       setError(
-        "We could not confirm whether your order was saved. Your cart has been kept. Please contact the seller before retrying to avoid a duplicate order.",
+        sent
+          ? "We could not confirm whether your order was saved. Retry with the same details to recover the same order. Your cart has been kept."
+          : failure instanceof DOMException
+            ? "Checkout could not safely save a retry reference. Enable site storage before ordering."
+            : failure instanceof Error
+              ? failure.message
+              : "Checkout could not safely save a retry reference. Enable site storage before ordering.",
       );
     } finally {
       inFlight.current = false;
@@ -184,7 +229,7 @@ export function CheckoutDialog({
           <DialogDescription>
             {receipt
               ? "Keep your reference and send the saved order to the seller on WhatsApp."
-              : "Your order and items will be saved before WhatsApp opens. Payment and delivery are arranged with the seller."}
+              : "Your pending order will be saved before WhatsApp opens. Stock is checked and deducted only when the seller confirms; pending orders do not guarantee availability."}
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -230,7 +275,7 @@ export function CheckoutDialog({
                   minLength={2}
                   maxLength={100}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setBuyer({ ...buyer, name: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -243,7 +288,9 @@ export function CheckoutDialog({
                   maxLength={30}
                   placeholder="e.g. +2348031234567"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) =>
+                    setBuyer({ ...buyer, phone: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -255,7 +302,9 @@ export function CheckoutDialog({
                   minLength={5}
                   maxLength={500}
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) =>
+                    setBuyer({ ...buyer, address: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -264,7 +313,7 @@ export function CheckoutDialog({
                   id="buyer-note"
                   maxLength={500}
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  onChange={(e) => setBuyer({ ...buyer, note: e.target.value })}
                 />
               </div>
               <Button type="submit" className="w-full">

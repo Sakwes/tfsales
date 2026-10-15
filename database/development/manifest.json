@@ -35,15 +35,15 @@
     },
     {
       "path": "database/development/corrections/001_order_integrity.sql",
-      "sha256": "0425ffd6bacf26a12a458a936a7a42381267f8713e8c11a89a7d17c52ddd8737"
+      "sha256": "4a71157e0dd970bf1d3007c6a28bc11f76ff1e2c17a770cdca97f564b967cd08"
     },
     {
       "path": "database/development/corrections/002_checkout.sql",
-      "sha256": "a6962b4f3b2716709d1a802459a36f0a75eb4d75ba2c7b33fcf775ff76b97b33"
+      "sha256": "fac2ca477e535a2e6f070ca2c360e73745c110072c528930c1809ab1e50d6b2f"
     },
     {
       "path": "database/development/corrections/003_permissions_rls.sql",
-      "sha256": "9a505af37bdfd7346d3aa4d9b71a8245940d17030f1795e04034e130b027642f"
+      "sha256": "784b886a2221289cc83671929f3d7467ddf53ac6498e2ce69b3bf89f188e34a0"
     },
     {
       "path": "database/development/seeds/001_plans.sql",
@@ -55,7 +55,7 @@
     },
     {
       "path": "database/development/tests/postflight.sql",
-      "sha256": "9bb0564d8000f6a1358a03113897f3fbe7d6be33e7b192c54c47c1817573cbe4"
+      "sha256": "195a50536fcd7f1528e3b9a7ce8f6a796b27f9cd787cbc61c98d5866af20a710"
     }
   ]
 }

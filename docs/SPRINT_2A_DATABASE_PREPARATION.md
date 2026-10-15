@@ -1,5 +1,12 @@
 # Sprint 2A — development database preparation
 
+> Sprint 2B update: the inventory reservation policy and frontend UUID blocker below
+> describe the Sprint 2A review snapshot. They are superseded by
+> [SPRINT_2B_CHECKOUT_INVENTORY.md](SPRINT_2B_CHECKOUT_INVENTORY.md). The current
+> unapplied corrections deduct stock only at seller confirmation, and the client
+> now supplies durable request UUIDs. Migration order stays unchanged; checksums
+> have been refreshed. Do not alter any already-applied database history.
+
 Status: **prepared for review; no SQL executed and no database connection made**.
 Branch: `sellnova-v2-development`. Base commit:
 `5334f1e342d360d9eb3d4a0e4209bd183b9f8135`.

@@ -16,7 +16,7 @@ DECLARE
   line record; product public.products; prior record;
   normalized jsonb; priced jsonb := '[]'; payload text; phone text;
   subtotal numeric := 0; discount numeric := 0; promotion uuid; ref text; order_id uuid;
-  result jsonb; reserved boolean := false; input jsonb;
+  result jsonb; input jsonb;
 BEGIN
   IF _request_id IS NULL THEN RAISE EXCEPTION 'A stable checkout request UUID is required'; END IF;
   IF _customer_name IS NULL OR length(btrim(_customer_name)) NOT BETWEEN 2 AND 100
@@ -47,7 +47,7 @@ BEGIN
     'name',btrim(_customer_name),'phone',phone,'address',btrim(_delivery_address),
     'note',btrim(coalesce(_customer_note,'')),'coupon',upper(btrim(coalesce(_coupon,''))),
     'items',normalized)::text,'UTF8'),'sha256'),'hex');
-  -- One store lock serializes checkout/cancellation and coupon consumption.
+  -- One store lock serializes checkout/confirmation/cancellation and coupon consumption.
   -- Acquire product locks in UUID order too; all stock changes are transactional.
   PERFORM pg_advisory_xact_lock(hashtextextended(_store_id::text,921));
   SELECT * INTO prior FROM sellnova_dev.checkout_requests WHERE store_id=_store_id AND request_id=_request_id;
@@ -64,15 +64,10 @@ BEGIN
     SELECT * INTO product FROM public.products WHERE id=line.id AND store_id=_store_id FOR UPDATE;
     IF NOT FOUND OR NOT product.is_available THEN RAISE EXCEPTION 'Product unavailable'; END IF;
     IF product.track_stock AND product.stock_quantity<line.qty THEN RAISE EXCEPTION 'Insufficient stock'; END IF;
-    IF product.track_stock THEN
-      UPDATE public.products SET stock_quantity=stock_quantity-line.qty WHERE id=line.id;
-      reserved := true;
-    END IF;
     subtotal := subtotal+product.price*line.qty;
     priced := priced || jsonb_build_array(jsonb_build_object(
       'product_id',line.id,'product_name',product.name,'unit_price',product.price,
-      'quantity',line.qty,'line_total',product.price*line.qty,
-      'reserved_quantity',CASE WHEN product.track_stock THEN line.qty ELSE 0 END));
+      'quantity',line.qty,'line_total',product.price*line.qty));
   END LOOP;
   -- Lock every eligible promotion before calculating the best one; a seller's
   -- concurrent update cannot change terms between calculation and usage update.
@@ -85,12 +80,14 @@ BEGIN
     customer_note,subtotal,discount_total,total,promotion_id,coupon_code,stock_applied)
   VALUES (_store_id,ref,btrim(_customer_name),phone,btrim(_delivery_address),nullif(btrim(_customer_note),''),
     subtotal,discount,greatest(subtotal-discount,0),promotion,
-    CASE WHEN promotion IS NOT NULL THEN nullif(upper(btrim(_coupon)),'') END,reserved)
+    CASE WHEN promotion IS NOT NULL THEN nullif(upper(btrim(_coupon)),'') END,false)
   RETURNING id INTO order_id;
-  INSERT INTO public.order_items(order_id,product_id,product_name,unit_price,quantity,line_total,reserved_quantity)
+  INSERT INTO public.order_items(order_id,product_id,product_name,unit_price,quantity,line_total)
     SELECT order_id,(v->>'product_id')::uuid,v->>'product_name',(v->>'unit_price')::numeric,
-      (v->>'quantity')::integer,(v->>'line_total')::numeric,(v->>'reserved_quantity')::integer
+      (v->>'quantity')::integer,(v->>'line_total')::numeric
     FROM jsonb_array_elements(priced) v;
+  INSERT INTO sellnova_dev.order_events(order_id,from_status,to_status,actor_id,stock_movements)
+    VALUES(order_id,'checkout','new',auth.uid(),'[]'::jsonb);
   IF promotion IS NOT NULL THEN UPDATE public.promotions SET used_count=used_count+1 WHERE id=promotion; END IF;
   result := jsonb_build_object('order_reference',ref,'subtotal',subtotal,'discount_total',discount,
     'total',greatest(subtotal-discount,0),'items',priced);

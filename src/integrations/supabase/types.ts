@@ -43,6 +43,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          deducted_quantity: number
           created_at: string
           id: string
           line_total: number
@@ -53,6 +54,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          deducted_quantity?: number
           created_at?: string
           id?: string
           line_total: number
@@ -63,6 +65,7 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          deducted_quantity?: number
           created_at?: string
           id?: string
           line_total?: number
@@ -759,6 +762,7 @@ export type Database = {
       }
       sellnova_create_order: {
         Args: {
+          _request_id: string
           _coupon?: string
           _customer_name: string
           _customer_note: string

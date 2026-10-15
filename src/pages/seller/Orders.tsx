@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { SellerPage } from "@/components/SellerPage";
 import { Card } from "@/components/ui/card";
@@ -85,6 +85,8 @@ const OrdersPage = () => {
   const [selected, setSelected] = useState<Order | null>(null);
   const [fee, setFee] = useState("0");
   const [saving, setSaving] = useState(false);
+  const statusBusy = useRef(false);
+  const [statusError, setStatusError] = useState("");
 
   useMetaTags({
     title: "Orders | SellNova",
@@ -151,6 +153,7 @@ const OrdersPage = () => {
   }, [orders, filter, query]);
 
   const open = (order: Order) => {
+    setStatusError("");
     setSelected(order);
     setFee(String(order.delivery_fee ?? 0));
   };
@@ -189,19 +192,33 @@ const OrdersPage = () => {
   };
 
   const changeStatus = async (next: OrderStatus) => {
-    if (!selected) return;
+    if (!selected || statusBusy.current || !NEXT_STATUSES[selected.status].includes(next)) return;
+    const order = selected;
+    statusBusy.current = true;
     setSaving(true);
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ status: next })
-      .eq("id", selected.id);
-    setSaving(false);
-    if (updateError) {
-      toast.error(updateError.message || "Could not update this order");
-      return;
+    setStatusError("");
+    try {
+      const { data, error: updateError } = await supabase
+        .from("orders").update({ status: next }).eq("id", order.id)
+        .eq("status", order.status).select("id");
+      if (updateError) {
+        const message = updateError.message.includes("Insufficient stock")
+          ? `${updateError.message}. This order remains pending; refresh stock or cancel the order.`
+          : updateError.message || "Could not confirm the status change. Refresh before retrying.";
+        setStatusError(message);
+        toast.error(message);
+      } else if (!data?.length) {
+        setStatusError("This order has changed. Its latest status has been refreshed; review it before retrying.");
+      } else {
+        toast.success(`Order marked ${STATUS_LABEL[next].toLowerCase()}`);
+      }
+      await refreshSelected(order.id);
+    } catch {
+      setStatusError("Could not confirm the status change. Refresh the orders page before retrying.");
+    } finally {
+      statusBusy.current = false;
+      setSaving(false);
     }
-    toast.success(`Order marked ${STATUS_LABEL[next].toLowerCase()}`);
-    await refreshSelected(selected.id);
   };
 
   const messageCustomer = (order: Order) => {
@@ -353,6 +370,8 @@ const OrdersPage = () => {
                 </DialogDescription>
               </DialogHeader>
 
+              {statusError && <p role="alert" className="text-sm text-destructive">{statusError}</p>}
+              {selected.status === "new" && <p className="text-sm text-muted-foreground">Pending orders do not reserve stock. Confirming checks current availability and deducts stock once.</p>}
               <div className="space-y-4">
                 <div className="rounded-lg border p-3 text-sm space-y-1">
                   <p className="font-medium">{selected.customer_name}</p>

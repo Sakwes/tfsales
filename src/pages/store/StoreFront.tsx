@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { stockState } from "@/lib/plan";
 import { CheckoutDialog } from "@/components/store/CheckoutDialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,6 +50,10 @@ interface Product {
   description: string | null;
   price: number;
   images: string[];
+  is_available: boolean;
+  track_stock: boolean;
+  stock_quantity: number;
+  low_stock_threshold: number;
 }
 
 interface CartItem {
@@ -155,7 +160,7 @@ const StoreFront = () => {
 
     const { data: productsData } = await supabase
       .from("products")
-      .select("id, name, description, price, images")
+      .select("id, name, description, price, images, is_available, track_stock, stock_quantity, low_stock_threshold")
       .eq("store_id", storeData.id)
       .order("created_at", { ascending: false });
 
@@ -231,6 +236,11 @@ const StoreFront = () => {
   }, [store, canonicalUrl, whatsappNumber]);
 
   const addToCart = (product: Product, qty = 1) => {
+    const existing = cart.find(item => item.id === product.id)?.quantity ?? 0;
+    if (!stockState(product).sellable || (product.track_stock && existing + qty > product.stock_quantity)) {
+      toast.error("This quantity is no longer available. Please refresh the store.");
+      return;
+    }
     setCart(prev => {
       const existing = prev.find(i => i.id === product.id);
       if (existing) {
@@ -466,7 +476,12 @@ const StoreFront = () => {
         sellerPhone={whatsappNumber}
         storeUrl={canonicalUrl}
         items={checkoutItems}
-        onSaved={() => { setCart([]); setHasReceipt(true); }}
+        onSaved={() => {
+          let persisted = false;
+          try { localStorage.setItem(cartKey(store.id), "[]"); persisted = true; } catch { /* retain checkout UUID */ }
+          setCart([]); setHasReceipt(true);
+          return persisted;
+        }}
       />}
       {hasReceipt && <div className="p-3 text-center border-b"><Button variant="outline" onClick={() => setCheckoutOpen(true)}>View saved order</Button></div>}
       <header className="bg-gradient-primary text-white py-8 px-4 sm:px-6 lg:px-8">
@@ -578,6 +593,7 @@ const StoreFront = () => {
                     <p className="text-xl font-bold text-primary mt-auto">
                       {formatCurrency(product.price)}
                     </p>
+                    <p className="text-sm text-muted-foreground">{stockState(product).label}</p>
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <Button
                         size="sm"
@@ -588,6 +604,7 @@ const StoreFront = () => {
                       <Button
                         size="sm"
                         variant="hero"
+                        disabled={!stockState(product).sellable}
                         onClick={() => addToCart(product, 1)}>
                         Add
                       </Button>
@@ -630,6 +647,7 @@ const StoreFront = () => {
                 </DialogDescription>
               </DialogHeader>
 
+              <p className="text-sm text-muted-foreground">{stockState(selectedProduct).label}. Pending orders do not guarantee stock.</p>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <div className="relative aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
@@ -750,6 +768,7 @@ const StoreFront = () => {
                       variant="hero"
                       size="lg"
                       className="w-full"
+                      disabled={!stockState(selectedProduct).sellable}
                       onClick={() => {
                         addToCart(selectedProduct, quantity);
                         setSelectedProduct(null);

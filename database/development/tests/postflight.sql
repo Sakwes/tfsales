@@ -12,6 +12,9 @@ DO $$ BEGIN
  IF to_regprocedure('public.sellnova_create_order(uuid,text,text,text,text,jsonb,text)') IS NOT NULL
     OR to_regprocedure('public.sellnova_create_order(uuid,text,text,text,text,jsonb,text,uuid)') IS NULL THEN
    RAISE EXCEPTION 'Unsafe or missing checkout overload'; END IF;
+ IF has_column_privilege('authenticated','public.order_items','deducted_quantity','UPDATE')
+    OR to_regclass('sellnova_dev.order_events') IS NULL THEN
+   RAISE EXCEPTION 'Unsafe or missing inventory audit ledger'; END IF;
  IF has_function_privilege('anon','public.sellnova_discount_for(uuid,numeric,text,jsonb)','EXECUTE') THEN
    RAISE EXCEPTION 'Internal discount helper exposed'; END IF;
  IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace

@@ -1,6 +1,6 @@
 """Run with Python Playwright and system Chromium against the mock-configured Vite server.
 
-VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_PUBLISHABLE_KEY=mock-public-key \
+SELLNOVA_ISOLATED_MOCKS=1 VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_PUBLISHABLE_KEY=mock-public-key \
 VITE_STORE_URL=http://127.0.0.1:8081 npm run dev -- --host 127.0.0.1 --port 8081 --strictPort
 python tests/sprint1_browser.py
 
@@ -43,6 +43,11 @@ class SprintOneBrowserTests(unittest.TestCase):
         self.external = []
         self.errors = []
         self.mode = "success"
+        self.saved_orders = {}
+        self.product = dict(PRODUCT, low_stock_threshold=0)
+        self.orders = []
+        self.order_writes = []
+        self.order_error = False
         self.pending = None
         self.legacy = False
         self.empty = False
@@ -55,6 +60,10 @@ class SprintOneBrowserTests(unittest.TestCase):
         """)
 
     def tearDown(self):
+        if self.pending:
+            self.pending.abort()
+            self.pending = None
+        self.context.unroute_all(behavior="wait")
         self.context.close()
         self.assertEqual(self.external, [], "Unexpected external request (blocked)")
         self.assertEqual(self.errors, [], "Uncaught browser error")
@@ -88,13 +97,31 @@ class SprintOneBrowserTests(unittest.TestCase):
             elif self.mode == "invalid":
                 self.fulfill(route, {"unexpected": True})
             else:
-                self.fulfill(route, RECEIPT)
+                key = req.post_data_json.get('_request_id')
+                if key not in self.saved_orders:
+                    self.saved_orders[key] = RECEIPT
+                if self.mode == "lost_after_commit":
+                    route.abort("failed")
+                else:
+                    self.fulfill(route, self.saved_orders[key])
             return
         if url.path.endswith("/rpc/sellnova_review_context"):
             self.fulfill(route, {"valid": False})
             return
         table = url.path.rsplit("/", 1)[-1]
         query = parse_qs(url.query)
+        if table == "orders" and req.method == "PATCH":
+            self.order_writes.append(req.post_data_json)
+            if self.order_error:
+                self.fulfill(route, {"message": "Insufficient stock for Test Shirt. Need 2, available 1", "code": "P0001"}, 400)
+                return
+            for order in self.orders:
+                if query.get("id") == ["eq." + order["id"]] and query.get("status") == ["eq." + order["status"]]:
+                    order.update(req.post_data_json)
+                    self.fulfill(route, [{"id": order["id"]}])
+                    return
+            self.fulfill(route, [])
+            return
         if req.method != "GET":
             # Existing visitor/view analytics writes are mocked too.
             self.fulfill(route, [])
@@ -102,7 +129,9 @@ class SprintOneBrowserTests(unittest.TestCase):
         if table == "stores":
             rows = [] if self.legacy and "slug" in query else [STORE]
         elif table == "products":
-            rows = [] if self.empty else [PRODUCT]
+            rows = [] if self.empty else [self.product]
+        elif table == "orders":
+            rows = self.orders
         else:
             rows = []
         if "application/vnd.pgrst.object+json" in req.headers.get("accept", ""):
@@ -166,10 +195,14 @@ class SprintOneBrowserTests(unittest.TestCase):
         self.page.locator("form").evaluate("form => { form.requestSubmit(); form.requestSubmit(); }")
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.page.evaluate("window.orderPopups"), [])
-        self.assertEqual(self.calls[0], dict(_store_id=STORE_ID, _customer_name="Ada Buyer",
+        from uuid import UUID
+        self.assertEqual(UUID(self.calls[0]["_request_id"]).version, 4)
+        payload = {k: v for k, v in self.calls[0].items() if k != "_request_id"}
+        self.assertEqual(payload, dict(_store_id=STORE_ID, _customer_name="Ada Buyer",
             _customer_phone="2348031234567", _delivery_address="10 Test Road, Lagos",
             _customer_note="Call on arrival", _items=[dict(product_id=PRODUCT_ID, quantity=1)]))
         self.fulfill(self.pending, RECEIPT)
+        self.pending = None
         expect(self.page.get_by_text("SN-TEST123456", exact=True)).to_be_visible()
         link = self.page.get_by_role("link", name="Open saved order in WhatsApp")
         message = unquote(link.get_attribute("href"))
@@ -211,23 +244,25 @@ class SprintOneBrowserTests(unittest.TestCase):
         self.mode = "invalid"
         self.submit()
         expect(self.page.get_by_role("alert")).to_contain_text("invalid receipt")
-        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_disabled()
-        self.assertEqual(len(self.calls), 1)
-        self.assertEqual(self.page.evaluate("window.orderPopups"), [])
+        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_enabled()
+        self.mode = "success"
+        self.submit()
+        expect(self.page.get_by_text("SN-TEST123456", exact=True)).to_be_visible()
+        self.assertEqual(self.calls[0]["_request_id"], self.calls[1]["_request_id"])
 
     def test_ambiguous_network_failure_prevents_blind_retry(self):
         self.checkout()
         self.mode = "network"
         self.submit()
-        expect(self.page.get_by_role("alert")).to_contain_text("contact the seller")
-        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_disabled()
+        expect(self.page.get_by_role("alert")).to_contain_text("Retry with the same details")
+        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_enabled()
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.page.evaluate("window.orderPopups"), [])
         self.page.get_by_role("button", name="Close", exact=True).click()
         self.page.get_by_role("button", name="Open cart, 1 item", exact=True).click()
         self.page.get_by_role("button", name="Send order on WhatsApp", exact=True).click()
-        expect(self.page.get_by_role("alert")).to_contain_text("contact the seller")
-        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_disabled()
+        expect(self.page.get_by_role("alert")).to_contain_text("Retry with the same details")
+        expect(self.page.get_by_role("button", name="Save order and open WhatsApp")).to_be_enabled()
         self.assertEqual(len(self.calls), 1)
 
     def test_cart_restore_and_quantity_controls(self):
