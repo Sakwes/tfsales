@@ -155,13 +155,18 @@ class OfflineSafetyTests(unittest.TestCase):
         import ssl
         ca = str(Path(__file__).parent / 'fixtures' / 'offline-ca.pem')
         original_factory = ssl.create_default_context
+        system_root = os.environ.get('SystemRoot', r'C:\Windows')
 
         def strict_factory(**kwargs):
+            self.assertEqual(os.environ.get('SystemRoot'), system_root)
             context = original_factory(**kwargs)
             context.verify_flags |= ssl.VERIFY_X509_STRICT
             return context
 
-        with patch.dict(os.environ, {'DEV_DB_SSLROOTCERT': ca}, clear=True), \
+        # Real OpenSSL initialization needs the platform environment on Windows
+        # (notably SystemRoot). Isolate only the setting this test consumes.
+        with patch.dict(os.environ, {'SystemRoot': system_root}), \
+             patch.dict(os.environ, {'DEV_DB_SSLROOTCERT': ca}), \
              patch('check_transport.ssl.create_default_context', side_effect=strict_factory):
             default = check_transport.tls_context(target.SESSION_HOST)
             compat = check_transport.tls_context(target.SESSION_HOST, supabase_root_2021_compat=True)
@@ -172,12 +177,33 @@ class OfflineSafetyTests(unittest.TestCase):
             self.assertTrue(context.check_hostname)
             self.assertEqual(context.cert_store_stats()['x509_ca'], 1)
 
+    def test_real_tls_context_preserves_windows_runtime_environment(self):
+        import ssl
+        ca = str(Path(__file__).parent / 'fixtures' / 'offline-ca.pem')
+        original_factory = ssl.create_default_context
+        system_root = os.environ.get('SystemRoot', r'C:\Windows')
+
+        def platform_factory(**kwargs):
+            # Exercise the Windows environment dependency even on Linux. Keep
+            # the actual Windows value when running natively there.
+            self.assertEqual(os.environ.get('SystemRoot'), system_root)
+            return original_factory(**kwargs)
+
+        with patch.dict(os.environ, {'SystemRoot': system_root}):
+            with patch.dict(os.environ, {'DEV_DB_SSLROOTCERT': ca}), \
+                 patch('check_transport.ssl.create_default_context', side_effect=platform_factory):
+                context = check_transport.tls_context(target.SESSION_HOST)
+            self.assertEqual(os.environ.get('SystemRoot'), system_root)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+        self.assertEqual(context.cert_store_stats()['x509_ca'], 1)
+
     def test_transport_compatibility_requires_session_and_explicit_valid_ca(self):
-        for env, host in (({}, target.SESSION_HOST),
+        for env, host in (({'DEV_DB_SSLROOTCERT': ''}, target.SESSION_HOST),
                           ({'DEV_DB_SSLROOTCERT': self.cert.name}, target.DB_HOST),
                           ({'DEV_DB_SSLROOTCERT': '/does-not-exist'}, target.SESSION_HOST),
                           ({'DEV_DB_SSLROOTCERT': self.cert.name}, target.SESSION_HOST)):
-            with self.subTest(host=host, env=bool(env)), patch.dict(os.environ, env, clear=True):
+            with self.subTest(host=host, env=bool(env)), patch.dict(os.environ, env):
                 with self.assertRaises((ValueError, OSError)):
                     check_transport.tls_context(host, supabase_root_2021_compat=True)
 

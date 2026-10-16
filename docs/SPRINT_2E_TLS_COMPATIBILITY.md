@@ -60,12 +60,12 @@ the actually negotiated protocol.
 ## Exact Windows PowerShell verification commands
 
 Run from the repository root on `sellnova-v2-development`. Use an approved
-Python 3.13+ Windows installation and its compatible pinned binary wheels.
+Python 3.14.6 Windows installation and its compatible pinned binary wheels.
 The venv can be reused if already prepared. No credentials are needed.
 
 ```powershell
 git branch --show-current
-py -3.13 -m venv .venv-devdb
+py -3.14 -m venv .venv-devdb
 $py = '.\.venv-devdb\Scripts\python.exe'
 & $py -m pip install -r scripts/devdb/requirements.txt
 & $py -c "import sys,ssl,psycopg; from psycopg import pq; print(sys.version); print(ssl.OPENSSL_VERSION); print('psycopg',psycopg.__version__,'implementation',pq.__impl__,'libpq',pq.version()); print('Python verify flags',ssl.create_default_context().verify_flags)"
@@ -127,3 +127,27 @@ diagnose its actual error and CA chain before proposing any further change.
 
 No remote database checks, authentication, SQL, migrations, production access,
 main merge or deployment were performed for Sprint 2E.
+
+## Windows offline-test environment correction
+
+The reported Python 3.14.6 failure occurred inside the real default context
+factory, before the test's strict-flag adjustment. The test had cleared the
+entire process environment, including Windows `SystemRoot`, immediately before
+calling OpenSSL. This is an unsafe test isolation boundary for Windows crypto
+initialization. The saved factory calls the original function, so the patch
+does not recursively call itself. The synthetic PEM loads successfully here;
+no certificate change or TLS policy change is justified by this error.
+
+The two tests that create real contexts now override only `DEV_DB_SSLROOTCERT`,
+preserving platform variables. The missing-CA case explicitly sets that variable
+empty so an inherited setting cannot change the result. Added regression coverage
+preserves `SystemRoot` while creating a real context on all platforms (using its
+native value on Windows), with chain and hostname verification still required.
+No diagnostic or migration-runner code changed in this correction.
+
+Validation after correction: 24 offline tests and SQL/PLpgSQL static checks
+(14 files, 324 statements) passed on Linux. Native Windows Python 3.14.6 was
+unavailable; the environment-clearing defect is established by inspection, but
+attributing the opaque Windows OpenSSL error specifically to `SystemRoot`
+requires rerunning the commands above on that machine. No database connection
+is needed to verify this fix.
