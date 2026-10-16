@@ -57,10 +57,9 @@ def connection_options(environ=None):
 
 
 def connect_verified(*, read_only=False):
+    """Verify identity; read_only protects this check's transaction only."""
     # Import the driver only after all local identity and credential checks pass.
     options = connection_options()
-    if read_only:
-        options['options'] = '-c default_transaction_read_only=on'
     import psycopg
     conn = psycopg.connect(**options, autocommit=True)
     try:
@@ -71,11 +70,15 @@ def connect_verified(*, read_only=False):
         conn.execute("SET statement_timeout = '120s'")
         conn.execute("SET lock_timeout = '10s'")
         with conn.transaction():
+            if read_only:
+                # Poolers need not preserve startup session defaults. Enforce
+                # and verify the mode in the same transaction as the queries.
+                conn.execute('SET TRANSACTION READ ONLY')
+                if conn.execute('SHOW transaction_read_only').fetchone() != ('on',):
+                    raise ValueError('Read-only transaction required')
             database, user = conn.execute('SELECT current_database(), session_user').fetchone()
             if (database, user) != ('postgres', 'postgres'):
                 raise ValueError('Unexpected database identity')
-            if read_only and conn.execute('SHOW transaction_read_only').fetchone()[0] != 'on':
-                raise ValueError('Read-only connection required')
         return conn
     except BaseException:
         conn.close()

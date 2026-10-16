@@ -76,14 +76,18 @@ class OfflineSafetyTests(unittest.TestCase):
         for env in (self.env, self.session_env()):
             conn = MagicMock()
             conn.pgconn.ssl_in_use = True
-            conn.execute.return_value.fetchone.side_effect = [('postgres', 'postgres'), ('on',)]
+            conn.execute.return_value.fetchone.side_effect = [('on',), ('postgres', 'postgres')]
             driver = MagicMock()
             driver.connect.return_value = conn
             with patch.dict(os.environ, env, clear=True), patch.dict('sys.modules', psycopg=driver):
                 self.assertIs(target.connect_verified(read_only=True), conn)
             self.assertEqual(driver.connect.call_count, 1)
             self.assertEqual(driver.connect.call_args.kwargs['sslmode'], 'verify-full')
-            self.assertEqual(driver.connect.call_args.kwargs['options'], '-c default_transaction_read_only=on')
+            self.assertNotIn('options', driver.connect.call_args.kwargs)
+            self.assertEqual([call.args[0] for call in conn.execute.call_args_list], [
+                "SET statement_timeout = '120s'", "SET lock_timeout = '10s'",
+                'SET TRANSACTION READ ONLY', 'SHOW transaction_read_only',
+                'SELECT current_database(), session_user'])
             conn.close.assert_not_called()
 
     def test_failed_tls_identity_and_connection_never_retry(self):
@@ -92,7 +96,7 @@ class OfflineSafetyTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 conn = MagicMock()
                 conn.pgconn.ssl_in_use = failure != 'no_tls'
-                rows = [('wrong', 'postgres')] if failure == 'identity' else [('postgres', 'postgres'), ('off',)]
+                rows = [('on',), ('wrong', 'postgres')] if failure == 'identity' else [('off',)]
                 conn.execute.return_value.fetchone.side_effect = rows
                 driver = MagicMock()
                 driver.connect.return_value = conn
@@ -111,6 +115,73 @@ class OfflineSafetyTests(unittest.TestCase):
         with patch.dict(os.environ, self.session_env(), clear=True), patch('migrate.connect_verified', side_effect=AssertionError('Forbidden')):
             with self.assertRaises(ValueError):
                 migrate.apply(migrate.load_plan())
+
+    def test_read_only_transaction_failures_block_identity_and_close(self):
+        for failure in ('set', 'show', 'off', 'missing', 'database', 'role'):
+            with self.subTest(failure=failure):
+                conn = MagicMock()
+                conn.pgconn.ssl_in_use = True
+                active = False
+
+                def enter():
+                    nonlocal active
+                    active = True
+
+                def execute(sql):
+                    if sql.startswith('SET statement_timeout') or sql.startswith('SET lock_timeout'):
+                        return MagicMock()
+                    self.assertTrue(active, 'Read-only enforcement and queries must share a transaction')
+                    if sql == 'SET TRANSACTION READ ONLY' and failure == 'set':
+                        raise RuntimeError('synthetic enforcement failure')
+                    if sql == 'SHOW transaction_read_only':
+                        if failure == 'show':
+                            raise RuntimeError('synthetic status failure')
+                        row = None if failure == 'missing' else ('off',) if failure == 'off' else ('on',)
+                        return MagicMock(fetchone=MagicMock(return_value=row))
+                    if sql.startswith('SELECT'):
+                        self.assertIn(failure, ('database', 'role'))
+                        row = ('wrong', 'postgres') if failure == 'database' else ('postgres', 'wrong')
+                        return MagicMock(fetchone=MagicMock(return_value=row))
+                    return MagicMock()
+
+                conn.transaction.return_value.__enter__.side_effect = enter
+                conn.execute.side_effect = execute
+                driver = MagicMock()
+                driver.connect.return_value = conn
+                with patch.dict(os.environ, self.session_env(), clear=True), patch.dict('sys.modules', psycopg=driver):
+                    with self.assertRaises((ValueError, RuntimeError)):
+                        target.connect_verified(read_only=True)
+                statements = [call.args[0] for call in conn.execute.call_args_list]
+                if failure not in ('database', 'role'):
+                    self.assertNotIn('SELECT current_database(), session_user', statements)
+                conn.transaction.return_value.__exit__.assert_called_once()
+                self.assertIsNotNone(conn.transaction.return_value.__exit__.call_args.args[0])
+                conn.close.assert_called_once()
+                driver.connect.assert_called_once()
+
+    def test_default_connection_keeps_migration_session_behavior(self):
+        for env in (self.env, self.session_env()):
+            conn = MagicMock()
+            conn.pgconn.ssl_in_use = True
+            conn.execute.return_value.fetchone.return_value = ('postgres', 'postgres')
+            driver = MagicMock()
+            driver.connect.return_value = conn
+            with patch.dict(os.environ, env, clear=True), patch.dict('sys.modules', psycopg=driver):
+                self.assertIs(target.connect_verified(), conn)
+            self.assertEqual(driver.connect.call_args.kwargs, dict(target.connection_options(env), autocommit=True))
+            self.assertEqual([call.args[0] for call in conn.execute.call_args_list], [
+                "SET statement_timeout = '120s'", "SET lock_timeout = '10s'",
+                'SELECT current_database(), session_user'])
+            conn.close.assert_not_called()
+
+    def test_identity_cli_requests_read_only_verification(self):
+        conn = MagicMock()
+        with patch('sys.argv', ['check_identity.py', '--check']), \
+             patch('check_identity.connect_verified', return_value=conn) as connect, \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(check_identity.main(), 0)
+        connect.assert_called_once_with(read_only=True)
+        conn.__exit__.assert_called_once()
 
     def test_identity_and_transport_default_to_no_connection(self):
         with patch('check_identity.connect_verified', side_effect=AssertionError('Forbidden')), \

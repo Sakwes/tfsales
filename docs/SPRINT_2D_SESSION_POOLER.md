@@ -71,11 +71,13 @@ above before probing; set the mode explicitly for each endpoint.
 3. Only after transport succeeds and development credentials are securely
    provided, `python scripts/devdb/check_identity.py --check` is the separate
    opt-in identity check. Its default invocation does not connect. The check
-   requests `default_transaction_read_only=on` at connection startup, verifies
-   TLS and backend identity, and checks transaction read-only state. It performs
-   session timeout settings and read-only identity queries, no schema/data writes.
-   A server/pooler refusal of the startup option fails closed. It cannot run
-   migrations. Errors print exception types only.
+   verifies TLS, then explicitly sets and verifies transaction read-only state
+   before reading backend identity in that same transaction. It performs session
+   timeout settings and read-only identity queries, no schema/data writes.
+   Enforcement/status failure stops before identity queries and closes the
+   connection. See [Sprint 2F](SPRINT_2F_READ_ONLY_IDENTITY.md) for the startup
+   setting compatibility correction. It cannot run migrations. Errors print
+   exception types only.
 4. Stop before any migration or write test. This sprint does not authorize
    `migrate.py --apply`, integration `--run`, seeds, admin provisioning or DDL.
 
