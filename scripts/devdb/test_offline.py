@@ -151,6 +151,57 @@ class OfflineSafetyTests(unittest.TestCase):
                 target.connect_verified()
         driver.connect.assert_not_called()
 
+    def test_transport_compatibility_keeps_real_context_verification(self):
+        import ssl
+        ca = str(Path(__file__).parent / 'fixtures' / 'offline-ca.pem')
+        original_factory = ssl.create_default_context
+
+        def strict_factory(**kwargs):
+            context = original_factory(**kwargs)
+            context.verify_flags |= ssl.VERIFY_X509_STRICT
+            return context
+
+        with patch.dict(os.environ, {'DEV_DB_SSLROOTCERT': ca}, clear=True), \
+             patch('check_transport.ssl.create_default_context', side_effect=strict_factory):
+            default = check_transport.tls_context(target.SESSION_HOST)
+            compat = check_transport.tls_context(target.SESSION_HOST, supabase_root_2021_compat=True)
+        self.assertTrue(default.verify_flags & ssl.VERIFY_X509_STRICT)
+        self.assertEqual(compat.verify_flags, default.verify_flags & ~ssl.VERIFY_X509_STRICT)
+        for context in (default, compat):
+            self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+            self.assertTrue(context.check_hostname)
+            self.assertEqual(context.cert_store_stats()['x509_ca'], 1)
+
+    def test_transport_compatibility_requires_session_and_explicit_valid_ca(self):
+        for env, host in (({}, target.SESSION_HOST),
+                          ({'DEV_DB_SSLROOTCERT': self.cert.name}, target.DB_HOST),
+                          ({'DEV_DB_SSLROOTCERT': '/does-not-exist'}, target.SESSION_HOST),
+                          ({'DEV_DB_SSLROOTCERT': self.cert.name}, target.SESSION_HOST)):
+            with self.subTest(host=host, env=bool(env)), patch.dict(os.environ, env, clear=True):
+                with self.assertRaises((ValueError, OSError)):
+                    check_transport.tls_context(host, supabase_root_2021_compat=True)
+
+    def test_transport_compatibility_fails_closed_on_certificate_or_hostname_error(self):
+        import ssl
+        for reason in ('certificate chain rejected', 'hostname mismatch'):
+            context = MagicMock()
+            context.wrap_socket.side_effect = ssl.SSLCertVerificationError(reason)
+            raw = MagicMock()
+            raw.__enter__.return_value = raw
+            raw.recv.return_value = b'S'
+            addresses = [(2, 1, 6, '', ('192.0.2.1', 5432))]
+            output = io.StringIO()
+            with patch.dict(os.environ, self.session_env(), clear=True), \
+                 patch('sys.argv', ['check_transport.py', '--probe', '--supabase-root-2021-compat']), \
+                 patch('check_transport.ssl.create_default_context', return_value=context), \
+                 patch('check_transport.socket.getaddrinfo', side_effect=[addresses, OSError()]), \
+                 patch('check_transport.socket.socket', return_value=raw), contextlib.redirect_stdout(output):
+                self.assertEqual(check_transport.main(), 1)
+            context.wrap_socket.assert_called_once_with(raw, server_hostname=target.SESSION_HOST)
+            self.assertIn('COMPATIBILITY:', output.getvalue())
+            self.assertIn('BLOCKED: TLS verification', output.getvalue())
+            raw.sendall.assert_called_once_with(b'\x00\x00\x00\x08\x04\xd2\x16/')
+
     def test_identity_failure_output_does_not_reveal_driver_details(self):
         output = io.StringIO()
         with patch('sys.argv', ['check_identity.py', '--check']), \

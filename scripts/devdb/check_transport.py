@@ -1,25 +1,43 @@
 #!/usr/bin/env python3
 """Pinned-development DNS/TCP/PostgreSQL TLS probe. No authentication or SQL."""
 import argparse
+import os
 import socket
 import ssl
 import struct
-from target import endpoint, trusted_root
+from target import SESSION_HOST, endpoint, trusted_root
+
+
+def tls_context(host, *, supabase_root_2021_compat=False):
+    if supabase_root_2021_compat and (
+        host != SESSION_HOST or not os.environ.get('DEV_DB_SSLROOTCERT')
+    ):
+        raise ValueError('Compatibility requires Session Pooler and an explicit trusted CA file')
+    context = ssl.create_default_context(cafile=trusted_root())
+    if supabase_root_2021_compat:
+        # Python 3.13+ adds strict CA extension checks that libpq does not
+        # request. Retain CERT_REQUIRED, check_hostname and all other flags.
+        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return context
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--probe', action='store_true')
+    parser.add_argument('--supabase-root-2021-compat', action='store_true',
+                        help='explicit opt-in: omit strict CA extension checks; chain/hostname verification stays enabled')
     args = parser.parse_args()
     if not args.probe:
         print('PLAN ONLY: no network probe; --probe sends only PostgreSQL SSLRequest/TLS')
         return 0
     try:
         host, _ = endpoint()
-        context = ssl.create_default_context(cafile=trusted_root())
+        context = tls_context(host, supabase_root_2021_compat=args.supabase_root_2021_compat)
     except (ValueError, OSError):
         print('STOP: invalid development endpoint or trusted certificate configuration')
         return 1
+    if args.supabase_root_2021_compat:
+        print('COMPATIBILITY: VERIFY_X509_STRICT disabled; certificate-chain and hostname verification enabled')
     addresses = []
     for family, label in ((socket.AF_INET, 'IPv4'), (socket.AF_INET6, 'IPv6')):
         try:

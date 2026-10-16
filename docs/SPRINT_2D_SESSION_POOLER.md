@@ -31,6 +31,10 @@ Direct mode rejects pooler URIs and session mode rejects direct URIs.
 
 ## TLS and identity safeguards
 
+See [Sprint 2E TLS compatibility](SPRINT_2E_TLS_COMPATIBILITY.md) for the
+Python 3.13 strict-extension distinction, explicit diagnostic compatibility
+option and Windows CA configuration. The migration runner retains `verify-full`.
+
 Both modes internally construct `sslmode=verify-full`, a trusted CA file,
 connection timeout and the exact approved hostname. The default CA bundle is
 `/etc/ssl/certs/ca-certificates.crt`; `DEV_DB_SSLROOTCERT` can name a trusted CA
