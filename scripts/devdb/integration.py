@@ -28,16 +28,62 @@ def checkout(conn, ids, request=None, quantity=1, items=None, role='anon', user=
              None,request or uuid4())).fetchone()[0]
 
 
-def must_fail(conn, sql, params=(), role='authenticated', user=None):
+def must_fail(conn, sql, params=(), role='authenticated', user=None, states=None):
     import psycopg
     try:
         with conn.transaction():
             claim(conn,role,user)
             conn.execute(sql,params)
     except psycopg.Error as error:
-        assert error.sqlstate in ('42501','P0001','23514','23502','22023','22P02'), error.sqlstate
+        assert error.sqlstate in (states if states is not None else
+                                 ('42501','P0001','23514','23502','22023','22P02')), error.sqlstate
         return
     raise AssertionError('Expected database rejection')
+
+
+def check_seller_store_creation(conn, ids):
+    """Exercise browser-equivalent invoker permissions; roll back all fixtures."""
+    from psycopg import Rollback
+    seller = uuid4()
+    name = 'Seller Browser ' + str(ids['run'])[:8]
+    insert = '''INSERT INTO public.stores(seller_id,store_name,contact_phone)
+                VALUES(%s,%s,%s) RETURNING id,slug,whatsapp_phone'''
+    with conn.transaction():
+        # Simulate a freshly registered seller, before that seller has a store.
+        conn.execute('''INSERT INTO auth.users(id,email,aud,role,raw_user_meta_data)
+            VALUES(%s,%s,'authenticated','authenticated',%s::jsonb)''',
+            (seller, 'store-create+'+str(ids['run'])+'@example.test',
+             json.dumps({'sellnova_synthetic_test': True, 'sellnova_test_run': str(ids['run'])})))
+        with conn.transaction():
+            claim(conn, 'authenticated', seller)
+            assert conn.execute('SELECT current_user').fetchone() == ('authenticated',)
+            store, slug, phone = conn.execute(insert, (seller, name, '0803 000 0004')).fetchone()
+            assert slug == name.lower().replace(' ', '-') and phone == '2348030000004'
+            # The update also invokes the store validator and timestamp trigger.
+            assert conn.execute('''UPDATE public.stores SET store_name=%s,contact_phone=%s
+                WHERE id=%s RETURNING slug,whatsapp_phone''',
+                (name+' Updated', '0803 000 0005', store)).fetchone() == (slug+'-updated', '2348030000005')
+            for helper in ('sellnova_normalize_phone(text)', 'sellnova_slugify(text)'):
+                assert conn.execute("SELECT has_function_privilege(current_user,%s,'EXECUTE')",
+                                    ('public.'+helper,)).fetchone() == (True,)
+            assert conn.execute("SELECT has_function_privilege(current_user,'public.sellnova_stores_before_write()','EXECUTE')").fetchone() == (False,)
+        must_fail(conn, insert, (ids['seller_b'], name+' Forged', '08030000004'), user=seller, states=('42501',))
+        must_fail(conn, insert, (seller, name+' Anonymous', '08030000004'), role='anon', states=('42501',))
+        must_fail(conn, insert, (seller, name+' Invalid', 'bad'), user=seller, states=('P0001',))
+        must_fail(conn, 'UPDATE public.stores SET seller_id=%s WHERE id=%s',
+                  (ids['seller_b'], store), user=seller, states=('42501',))
+        with conn.transaction():
+            claim(conn, 'authenticated', ids['seller_b'])
+            assert conn.execute('UPDATE public.stores SET contact_phone=%s WHERE id=%s',
+                                ('08030000006', store)).rowcount == 0
+        for helper in ('sellnova_normalize_phone', 'sellnova_slugify'):
+            must_fail(conn, 'SELECT public.'+helper+'(%s)', ('08030000004',), role='anon', states=('42501',))
+        must_fail(conn, 'SELECT public.sellnova_stores_before_write()', user=seller, states=('42501',))
+        must_fail(conn, 'SELECT public.sellnova_discount_for(%s,1000,NULL,%s::jsonb)',
+                  (ids['store_a'], '[]'), user=seller, states=('42501',))
+        # Includes the auth/profile/role fixture and every store mutation above.
+        raise Rollback()
+    print('PASS authenticated seller store insert/update, helpers, ownership RLS and private ACLs')
 
 
 def run():
@@ -71,6 +117,8 @@ def run():
             assert owner.execute('SELECT phone FROM public.profiles WHERE id=%s',(ids['seller_a'],)).fetchone()==(None,)
             assert owner.execute("SELECT count(*) FROM public.user_roles WHERE user_id=%s AND role='seller'",(ids['seller_a'],)).fetchone()[0]==1
             print('PASS auth/profile trigger fixture (not real Auth API signup/login)')
+
+            check_seller_store_creation(owner, ids)
 
             key=uuid4()
             first=checkout(owner,ids,key)
