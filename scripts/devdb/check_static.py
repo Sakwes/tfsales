@@ -13,7 +13,7 @@ def main():
         raise RuntimeError('Static checks must run without Python optimization')
     files=load_plan()
     journal=json.loads((ROOT/'drizzle/migrations/meta/_journal.json').read_text())
-    historical=[str(p.relative_to(ROOT)) for p in sorted((ROOT/'supabase/migrations').glob('*.sql'))]
+    historical=[p.relative_to(ROOT).as_posix() for p in sorted((ROOT/'supabase/migrations').glob('*.sql'))]
     historical += ['drizzle/migrations/'+entry['tag']+'.sql' for entry in journal['entries']]
     assert [p for p,_,_ in files[:8]] == historical
     statements=0
