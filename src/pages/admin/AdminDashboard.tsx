@@ -516,6 +516,7 @@ const AdminDashboard = () => {
                   <Shield className="h-6 w-6" />
                 </div>
                 <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                <Link to="/admin/subscriptions" className="underline">Subscriptions and payments</Link>
               </div>
               <p className="text-white/80">
                 Manage sellers and monitor platform activity

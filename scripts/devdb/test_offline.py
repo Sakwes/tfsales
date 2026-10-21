@@ -371,7 +371,7 @@ class OfflineSafetyTests(unittest.TestCase):
 
     def test_manifest_contains_exact_eight_historical_files_first(self):
         files=migrate.load_plan()
-        self.assertEqual(len(files),15)
+        self.assertEqual(len(files),16)
         self.assertTrue(all(path.startswith(('supabase/migrations/','drizzle/migrations/')) for path,_,_ in files[:8]))
         self.assertTrue(all(path.startswith('database/development/') for path,_,_ in files[8:]))
 
@@ -381,6 +381,13 @@ class OfflineSafetyTests(unittest.TestCase):
                          '2ab4fb79a7b1fb65b776d894bb793d2d9cc4df005a4ae50076eb727c092a4990')
         self.assertEqual(entries[14]['path'], 'database/development/corrections/004_store_helper_permissions.sql')
         migrate.load_plan()  # Verifies the bytes of every historical and appended file.
+
+    def test_billing_preserves_fifteen_applied_entries(self):
+        entries=json.loads(migrate.MANIFEST.read_text())['files']
+        self.assertEqual(hashlib.sha256(json.dumps(entries[:15],sort_keys=True).encode()).hexdigest(),
+                         '56e19d588f32af2ee496745f4f91a3b1e9716fa83e436294f307e23c67903090')
+        self.assertEqual(entries[15]['path'], 'database/development/corrections/005_subscription_payments.sql')
+        migrate.load_plan()
 
     def test_store_creation_integration_default_never_connects(self):
         with patch('integration.check_seller_store_creation', side_effect=AssertionError('Forbidden')), \

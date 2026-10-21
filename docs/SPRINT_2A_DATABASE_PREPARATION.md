@@ -87,6 +87,9 @@ rely on the old trigger's higher bound. Test native numeric limits explicitly.
 
 ## Runner safety and repeatability
 
+See [Sprint 4A manual billing](SPRINT_4A_SUBSCRIPTIONS.md) for the next append-only
+subscription correction, security review, validation and execution prerequisites.
+
 For the append-only store helper permission correction after the original 14
 applied files, see [Sprint 3C](SPRINT_3C_STORE_CREATION_PERMISSIONS.md), including
 Windows application steps, integration-test limits and rollback considerations.

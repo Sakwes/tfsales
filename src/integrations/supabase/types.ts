@@ -235,6 +235,8 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          payment_collection_enabled: boolean
+          version: number
           account_name: string | null
           account_number: string | null
           bank_name: string | null
@@ -244,6 +246,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          payment_collection_enabled?: boolean
+          version?: number
           account_name?: string | null
           account_number?: string | null
           bank_name?: string | null
@@ -253,6 +257,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          payment_collection_enabled?: boolean
+          version?: number
           account_name?: string | null
           account_number?: string | null
           bank_name?: string | null
@@ -542,6 +548,9 @@ export type Database = {
       }
       store_subscriptions: {
         Row: {
+          source_request_id: string | null
+          paid_amount: number | null
+          paid_duration_days: number | null
           expires_at: string | null
           plan_id: string
           started_at: string | null
@@ -550,6 +559,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          source_request_id?: string | null
+          paid_amount?: number | null
+          paid_duration_days?: number | null
           expires_at?: string | null
           plan_id: string
           started_at?: string | null
@@ -558,6 +570,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          source_request_id?: string | null
+          paid_amount?: number | null
+          paid_duration_days?: number | null
           expires_at?: string | null
           plan_id?: string
           started_at?: string | null
@@ -660,6 +675,10 @@ export type Database = {
       }
       subscription_requests: {
         Row: {
+          payment_snapshot: Json | null
+          settings_version: number | null
+          activated_from: string | null
+          activated_until: string | null
           amount: number
           created_at: string
           decision_reason: string | null
@@ -674,6 +693,10 @@ export type Database = {
           store_id: string
         }
         Insert: {
+          payment_snapshot?: Json | null
+          settings_version?: number | null
+          activated_from?: string | null
+          activated_until?: string | null
           amount?: number
           created_at?: string
           decision_reason?: string | null
@@ -688,6 +711,10 @@ export type Database = {
           store_id: string
         }
         Update: {
+          payment_snapshot?: Json | null
+          settings_version?: number | null
+          activated_from?: string | null
+          activated_until?: string | null
           amount?: number
           created_at?: string
           decision_reason?: string | null
@@ -752,6 +779,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      sellnova_update_payment_settings: { Args: { _version: number; _amount: number; _days: number; _bank: string; _name: string; _number: string; _instructions: string; _enabled: boolean }; Returns: Json }
+      sellnova_begin_payment: { Args: { _store_id: string }; Returns: string }
+      sellnova_notify_payment: { Args: { _request_id: string; _reference: string; _proof_path?: string | null }; Returns: Json }
+      sellnova_cancel_payment: { Args: { _request_id: string }; Returns: Json }
+      sellnova_review_payment: { Args: { _request_id: string; _approve: boolean; _verified: boolean; _reason?: string | null }; Returns: Json }
       get_store_product_count: { Args: { store_uuid: string }; Returns: number }
       has_role: {
         Args: {

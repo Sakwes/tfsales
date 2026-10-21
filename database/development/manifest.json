@@ -60,6 +60,10 @@
     {
       "path": "database/development/corrections/004_store_helper_permissions.sql",
       "sha256": "599fe6bdc7fd400a96c174a840f612c430620b91186bd56984bf8bc9b4db47cf"
+    },
+    {
+      "path": "database/development/corrections/005_subscription_payments.sql",
+      "sha256": "1f9239a1986b8d88057c8e642823fb93d0bd4769ca121753ccbbe625a5feea0e"
     }
   ]
 }

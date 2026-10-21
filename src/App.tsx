@@ -23,6 +23,7 @@ import ReviewsPage from "./pages/seller/Reviews";
 import PromotionsPage from "./pages/seller/Promotions";
 import ReviewPage from "./pages/store/ReviewPage";
 import StoreFront from "./pages/store/StoreFront";
+import AdminSubscriptions from "./pages/admin/Subscriptions";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import TermsAndConditions from "./pages/legal/TermsAndConditions";
@@ -79,6 +80,7 @@ const App = () => (
                 <AdminDashboard />
               </AdminRoute>
             } />
+            <Route path="/admin/subscriptions" element={<AdminRoute><AdminSubscriptions /></AdminRoute>} />
             <Route path="/404" element={<NotFound />} />
             <Route path="/store/:storeName" element={<StoreFront />} />
             <Route path="*" element={<NotFound />} />

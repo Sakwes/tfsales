@@ -242,24 +242,8 @@ def run():
             assert buckets=={'product-images':True,'store-logos':False,'payment-proofs':False}
             print('PASS input bounds, private ACLs, analytic rate rejection and bucket privacy metadata')
 
-            # A transaction-local test price never changes the stored zero-price seed.
-            with owner.transaction():
-                owner.execute("UPDATE public.plans SET price_ngn=5000 WHERE code='paid'")
-                paid=owner.execute("SELECT id FROM public.plans WHERE code='paid'").fetchone()[0]
-                with owner.transaction():
-                    claim(owner,'authenticated',ids['seller_a'])
-                    owner.execute('''INSERT INTO public.subscription_requests(store_id,plan_id,amount,payment_reference)
-                      VALUES(%s,%s,5000,'SYNTHETIC-NO-PAYMENT')''',(ids['store_a'],paid))
-                request=owner.execute('SELECT id FROM public.subscription_requests WHERE store_id=%s',(ids['store_a'],)).fetchone()[0]
-                must_fail(owner,'SELECT public.sellnova_decide_subscription(%s,true,NULL,30)',(request,),user=ids['seller_a'])
-                with owner.transaction():
-                    claim(owner,'authenticated',ids['admin'])
-                    owner.execute('SELECT public.sellnova_decide_subscription(%s,true,NULL,30)',(request,))
-                assert owner.execute('SELECT status FROM public.subscription_requests WHERE id=%s',(request,)).fetchone()[0]=='approved'
-                # Roll back price, request, decision and audit changes together.
-                from psycopg import Rollback
-                raise Rollback()
-            print('PASS seller cannot approve; synthetic admin can; temporary billing fixture rolled back')
+            from billing_integration import check_billing
+            check_billing(owner, ids)
         finally:
             if initialized:
                 with owner.transaction():
