@@ -44,7 +44,7 @@ export function useStoreBranding(storeId: string | undefined) {
     const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
     void refresh();
     // Also re-evaluate expiry and renew signed URLs before their ten-minute TTL.
-    const timer = window.setInterval(() => void refresh(), 60_000);
+    const timer = window.setInterval(() => void refresh(), 15_000);
     window.addEventListener("focus", onVisible);
     document.addEventListener("visibilitychange", onVisible);
     return () => {

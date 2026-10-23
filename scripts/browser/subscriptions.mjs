@@ -135,6 +135,10 @@ try {
     if (u.pathname.includes("/rpc/")) {
       const body = req.postDataJSON();
       calls.push({ endpoint, body });
+      if (endpoint === "sellnova_publication_state") {
+        const active = subscription?.status === 'active' && (!subscription.expires_at || Date.parse(subscription.expires_at) > Date.now());
+        return reply({ plan: active ? 'paid' : 'free', status: subscription?.status === 'active' && !active ? 'expired' : subscription?.status ?? 'free', allowance: active ? 100 : 12, saved_count: 5, selected_ids: [], visible_ids: [], version: 'mock-publication', expires_at: subscription?.expires_at ?? null, server_time: new Date().toISOString() });
+      }
       if (endpoint === "sellnova_begin_payment") {
         assert.deepEqual(body, { _store_id: store });
         if (failQuote)

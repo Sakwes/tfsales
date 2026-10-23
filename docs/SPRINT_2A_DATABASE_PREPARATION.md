@@ -87,6 +87,9 @@ rely on the old trigger's higher bound. Test native numeric limits explicitly.
 
 ## Runner safety and repeatability
 
+See [Sprint 4B publication controls](SPRINT_4B_PUBLICATION.md) for migration 18,
+expiry behavior, security review and the next separately approved validation.
+
 See [Sprint 4A manual billing](SPRINT_4A_SUBSCRIPTIONS.md) for the next append-only
 subscription correction, security review, validation and execution prerequisites.
 

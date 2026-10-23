@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { brandingStyle } from "@/lib/branding";
 import { useStoreBranding } from "@/hooks/use-store-branding";
@@ -85,6 +85,7 @@ const StoreFront = () => {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartStoreId, setCartStoreId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -96,6 +97,38 @@ const StoreFront = () => {
   const loadedStoreId = store?.id;
   const { branding, logoUrl, clearLogo } = useStoreBranding(loadedStoreId);
   const theme = brandingStyle(branding);
+  const catalogGeneration = useRef(0);
+  const currentStore = useRef(loadedStoreId);
+  currentStore.current = loadedStoreId;
+  const refreshCatalog = useCallback(async () => {
+    if (!loadedStoreId) return null;
+    const token = ++catalogGeneration.current;
+    try {
+      const result = await supabase.rpc("sellnova_storefront_products", { _store_id: loadedStoreId });
+      if (currentStore.current !== loadedStoreId || token !== catalogGeneration.current) return null;
+      if (result.error) throw result.error;
+      const products = (result.data ?? []) as Product[];
+      setStore(previous => previous?.id === loadedStoreId ? { ...previous, products } : previous);
+      setSelectedProduct(previous => previous ? products.find(p => p.id === previous.id) ?? null : null);
+      setCatalogError("");
+      return products;
+    } catch {
+      if (currentStore.current === loadedStoreId && token === catalogGeneration.current) {
+        setCatalogError("We could not verify the current catalog. Please refresh before ordering.");
+        setStore(previous => previous?.id === loadedStoreId ? { ...previous, products: [] } : previous);
+        setSelectedProduct(null);
+      }
+      return null;
+    }
+  }, [loadedStoreId]);
+  useEffect(() => {
+    if (!loadedStoreId) return;
+    const visible = () => { if (document.visibilityState === "visible") void refreshCatalog(); };
+    const timer = window.setInterval(visible, 15_000);
+    window.addEventListener("focus", visible);
+    document.addEventListener("visibilitychange", visible);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", visible); document.removeEventListener("visibilitychange", visible); };
+  }, [loadedStoreId, refreshCatalog]);
 
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -162,11 +195,8 @@ const StoreFront = () => {
       return;
     }
 
-    const { data: productsData } = await supabase
-      .from("products")
-      .select("id, name, description, price, images, is_available, track_stock, stock_quantity, low_stock_threshold")
-      .eq("store_id", storeData.id)
-      .order("created_at", { ascending: false });
+    const { data: productsData, error: productsError } = await supabase.rpc("sellnova_storefront_products", { _store_id: storeData.id });
+    setCatalogError(productsError ? "We could not verify the current catalog. Please refresh before ordering." : "");
 
     setStore({
       id: storeData.id,
@@ -239,7 +269,10 @@ const StoreFront = () => {
     };
   }, [store, canonicalUrl, whatsappNumber]);
 
-  const addToCart = (product: Product, qty = 1) => {
+  const addToCart = async (requested: Product, qty = 1) => {
+    const latest = await refreshCatalog();
+    const product = latest?.find(p => p.id === requested.id);
+    if (!product) { toast.error("This product is no longer public. Please choose another product."); return; }
     const existing = cart.find(item => item.id === product.id)?.quantity ?? 0;
     if (!stockState(product).sellable || (product.track_stock && existing + qty > product.stock_quantity)) {
       toast.error("This quantity is no longer available. Please refresh the store.");
@@ -279,8 +312,13 @@ const StoreFront = () => {
   const removeFromCart = (id: string) =>
     setCart(prev => prev.filter(i => i.id !== id));
 
-  const handleSendOrder = () => {
+  const handleSendOrder = async () => {
     if (!store || cart.length === 0) return;
+    const latest = await refreshCatalog();
+    if (!latest || cart.some(item => !latest.some(p => p.id === item.id && stockState(p).sellable))) {
+      toast.error("Your cart contains products that are no longer public or available. Remove them before checkout.");
+      return;
+    }
     const selection = (items: CartItem[]) => JSON.stringify(items.map(item => [item.id, item.quantity]));
     // Reopening an unchanged checkout preserves its in-flight/saved guard and buyer details.
     if (hasReceipt || selection(cart) !== selection(checkoutItems)) {
@@ -398,6 +436,7 @@ const StoreFront = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{item.name}</p>
+                  {!store?.products.some(p => p.id === item.id) && <p role="alert" className="text-sm text-destructive">No longer public — remove before checkout</p>}
                   <p className="text-sm text-muted-foreground">
                     {formatCurrency(item.price)}
                   </p>
@@ -548,7 +587,7 @@ const StoreFront = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-[60vh]">
         <h2 className="text-2xl font-bold mb-6">Our products</h2>
 
-        {store.products.length === 0 ? (
+        {catalogError ? <Card className="p-6"><p role="alert">{catalogError}</p><Button onClick={() => void refreshCatalog()}>Refresh catalog</Button></Card> : store.products.length === 0 ? (
           <Card className="p-12 text-center">
             <ShoppingBag
               className="h-16 w-16 mx-auto mb-4 text-muted-foreground"

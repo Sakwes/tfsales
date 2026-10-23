@@ -68,6 +68,10 @@
     {
       "path": "database/development/corrections/006_active_paid_payment_guard.sql",
       "sha256": "04b562a4be0eff123c2d8837b16d4ec466e0b367beda346f12f39267adb4d876"
+    },
+    {
+      "path": "database/development/corrections/007_product_publication.sql",
+      "sha256": "6df14582f2b9e8f876afae34b1ac6ff77a34745fa5782dc0fd67ec7aedfab30f"
     }
   ]
 }

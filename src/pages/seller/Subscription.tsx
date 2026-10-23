@@ -1,3 +1,4 @@
+import { usePublicationState } from "@/hooks/use-publication-state";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SellerPage } from "@/components/SellerPage";
@@ -26,6 +27,7 @@ export default function SubscriptionPage() {
   const [requests, setRequests] = useState<PaymentRequest[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [storeId, setStoreId] = useState<string | null>(null);
+  const { state: publication, error: publicationError } = usePublicationState(storeId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,7 +96,10 @@ export default function SubscriptionPage() {
   const draft = requests.find((r) => r.status === "draft");
   const pending = requests.find((r) => r.status === "pending");
   const snapshot = draft ? paymentSnapshot(draft) : null;
-  const current = effectivePlan(plans, sub);
+  const paidActive = publication ? publication.plan === "paid" : isEntitled(sub);
+  const current = publication ? plans.find(p => p.code === publication.plan) ?? effectivePlan(plans, sub) : effectivePlan(plans, sub);
+  const savedCount = publication?.saved_count ?? productCount;
+  const entitlementExpiry = publication ? publication.expires_at : sub?.expires_at;
   const paid = plans.find((p) => p.code === "paid");
   const notify = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -158,13 +163,15 @@ export default function SubscriptionPage() {
             </h2>
             <p>
               {current.max_products} products.{" "}
-              {isEntitled(sub) && sub?.expires_at
-                ? `Paid access ends ${new Date(sub.expires_at).toLocaleString()}.`
+              {paidActive
+                ? entitlementExpiry ? `Paid access ends ${new Date(entitlementExpiry).toLocaleString()}.` : "Paid access is active without a recorded expiry."
                 : "Free access continues indefinitely."}
             </p>
-            <p>{productCount} saved products · current plan limit {current.max_products}</p>
-            <progress className="w-full max-w-md" aria-label="Products used" value={Math.min(productCount, current.max_products)} max={current.max_products} />
-            {sub?.status === "suspended" && <p role="alert">Your Paid subscription is suspended. Contact support before renewing.</p>}
+            <p>{savedCount} saved products · current plan limit {current.max_products}</p>
+            <progress className="w-full max-w-md" aria-label="Products used" value={Math.min(savedCount, current.max_products)} max={current.max_products} />
+            {(publication?.status ?? sub?.status) === "suspended" && <p role="alert">Your Paid subscription is suspended. Contact support before renewing.</p>}
+            {publication?.status === "expired" && <p role="status">Your Paid subscription has expired. Free access continues indefinitely; you can request payment instructions below.</p>}
+            {publicationError && <p role="alert">Could not refresh your plan: {publicationError}</p>}
             <p className="text-sm text-muted-foreground">
               Your saved products are kept when Paid access expires.
             </p>
@@ -195,9 +202,9 @@ export default function SubscriptionPage() {
           </div>
           <Card className="p-6 space-y-4">
             <h2 className="text-xl font-semibold">
-              {isEntitled(sub) ? "Paid access is active" : "Upgrade to Paid"}
+              {paidActive ? "Paid access is active" : "Upgrade to Paid"}
             </h2>
-            {isEntitled(sub) ? (
+            {paidActive ? (
               <div>
                 <p>Your Paid subscription is active. Payment instructions will be available after it expires.</p>
                 <Button disabled>Get payment instructions</Button>
@@ -294,12 +301,12 @@ export default function SubscriptionPage() {
                 </p>
                 <Button
                   disabled={
-                    busy || isEntitled(sub) ||
+                    busy || paidActive ||
                     !settings?.payment_collection_enabled || !paid
                   }
                   onClick={() =>
                     void act(async () => {
-                      if (!storeId || isEntitled(sub)) return;
+                      if (!storeId || paidActive) return;
                       const r = await supabase.rpc("sellnova_begin_payment", {
                         _store_id: storeId,
                       });

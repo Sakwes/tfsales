@@ -31,6 +31,10 @@ try {
       if(u.origin!==api) {unexpected.push(req.url());return route.abort();}
       const reply=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
       if(req.method()==='OPTIONS') return reply({});
+      if(u.pathname.includes('/rpc/sellnova_storefront_products')) {
+        assert.deepEqual(req.postDataJSON(), {_store_id:store});
+        return reply([{id:'product',name:'Test Shirt',description:'A mock product',price:2000,images:[],is_available:true,track_stock:false,stock_quantity:0,low_stock_threshold:0}]);
+      }
       if(u.pathname.includes('/rpc/sellnova_public_branding')) {
         publicReads++;
         assert.deepEqual(req.postDataJSON(),{_store_id:store});

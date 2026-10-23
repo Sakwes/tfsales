@@ -313,6 +313,7 @@ export type Database = {
       }
       products: {
         Row: {
+          publication_selected: boolean
           created_at: string
           description: string | null
           id: string
@@ -327,6 +328,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          publication_selected?: boolean
           created_at?: string
           description?: string | null
           id?: string
@@ -341,6 +343,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          publication_selected?: boolean
           created_at?: string
           description?: string | null
           id?: string
@@ -779,6 +782,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      sellnova_storefront_products: { Args: { _store_id: string }; Returns: Database["public"]["Tables"]["products"]["Row"][] }
+      sellnova_public_product_ids: { Args: { _store_id: string }; Returns: string[] }
+      sellnova_publication_state: { Args: { _store_id: string }; Returns: Json }
+      sellnova_set_publication: { Args: { _store_id: string; _selected: string[]; _version: string }; Returns: Json }
       sellnova_update_payment_settings: { Args: { _version: number; _amount: number; _days: number; _bank: string; _name: string; _number: string; _instructions: string; _enabled: boolean }; Returns: Json }
       sellnova_begin_payment: { Args: { _store_id: string }; Returns: string }
       sellnova_notify_payment: { Args: { _request_id: string; _reference: string; _proof_path?: string | null }; Returns: Json }

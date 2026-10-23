@@ -274,6 +274,8 @@ def run():
             check_public_branding(owner, ids)
             from billing_integration import check_billing
             check_billing(owner, ids)
+            from publication_integration import check_publication
+            check_publication(owner, ids)
         finally:
             if initialized:
                 with owner.transaction():

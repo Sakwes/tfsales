@@ -1,3 +1,5 @@
+import { PublicationControls } from "@/components/PublicationControls";
+import type { PublicationState } from "@/lib/publication";
 import { SellerNav } from "@/components/SellerNav";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -89,7 +91,8 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
-  const maxProducts = 12;
+  const [publication, setPublication] = useState<PublicationState | null>(null);
+  const maxProducts = publication?.allowance ?? 12;
   const maxImagesPerProduct = 3;
 
   useEffect(() => {
@@ -97,10 +100,10 @@ const Dashboard = () => {
     loadStoreAndProducts();
   }, [user]);
 
-  const loadStoreAndProducts = async () => {
+  const loadStoreAndProducts = async (quiet = false) => {
     if (!user) return;
 
-    setLoading(true);
+    if (!quiet) setLoading(true);
 
     // Load store
     const { data: storeData, error: storeError } = await supabase
@@ -110,7 +113,7 @@ const Dashboard = () => {
       .maybeSingle();
 
     if (storeError || !storeData) {
-      setLoading(false);
+      if (!quiet) setLoading(false);
       return;
     }
 
@@ -127,7 +130,7 @@ const Dashboard = () => {
       setProducts(productsData);
     }
 
-    setLoading(false);
+    if (!quiet) setLoading(false);
   };
 
   const checkAdmin = async () => {
@@ -621,12 +624,13 @@ const Dashboard = () => {
           </p>
         </Card>
 
+        <PublicationControls storeId={store.id} products={products} onState={setPublication} onSaved={() => loadStoreAndProducts(true)} />
         {/* Products Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold">Your Products</h2>
             <p className="text-muted-foreground">
-              {products.length} of {maxProducts} products
+              {products.length} saved · current allowance {maxProducts}
             </p>
           </div>
 
@@ -670,6 +674,7 @@ const Dashboard = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold mb-1">{product.name}</h3>
+                  <p className="text-sm">{publication ? (publication.visible_ids.includes(product.id) ? "Publicly visible" : "Hidden from customers") : "Checking visibility…"}</p>
                   <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                     {product.description}
                   </p>
