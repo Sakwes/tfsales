@@ -67,7 +67,7 @@
     },
     {
       "path": "database/development/corrections/006_active_paid_payment_guard.sql",
-      "sha256": "9cf6c2ea95ffada39a72fdf9e30f4eead1695f0970c57b546e4bda8e0d614ca8"
+      "sha256": "04b562a4be0eff123c2d8837b16d4ec466e0b367beda346f12f39267adb4d876"
     }
   ]
 }

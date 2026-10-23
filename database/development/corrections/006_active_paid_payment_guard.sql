@@ -54,4 +54,3 @@ BEGIN
  RETURN jsonb_build_object('ok',true);
 EXCEPTION WHEN unique_violation THEN RAISE EXCEPTION 'Transfer reference already submitted';
 END $$;
-
