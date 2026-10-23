@@ -4,6 +4,9 @@ Prepared 2026-10-21 for `sellnova-v2-development` and development project
 `sellnova-v2-dev` (`qfcnaceeppgrquoszkor`). No database connections, remote SQL,
 seeds, resets, production operations, merges to main or deployments performed.
 
+See [the subsequent branding/payment correction](STOREFRONT_BRANDING_FIX.md) for
+the active-Paid instruction restriction that supersedes early renewal below.
+
 ## Implemented behavior
 
 Every store without a currently active, unexpired Paid entitlement uses Free

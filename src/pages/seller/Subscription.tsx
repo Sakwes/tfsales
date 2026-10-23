@@ -195,9 +195,14 @@ export default function SubscriptionPage() {
           </div>
           <Card className="p-6 space-y-4">
             <h2 className="text-xl font-semibold">
-              {isEntitled(sub) ? "Renew Paid access" : "Upgrade to Paid"}
+              {isEntitled(sub) ? "Paid access is active" : "Upgrade to Paid"}
             </h2>
-            {pending ? (
+            {isEntitled(sub) ? (
+              <div>
+                <p>Your Paid subscription is active. Payment instructions will be available after it expires.</p>
+                <Button disabled>Get payment instructions</Button>
+              </div>
+            ) : pending ? (
               <div role="status">
                 <p>
                   Pending: payment under review. Paid features activate only
@@ -289,11 +294,12 @@ export default function SubscriptionPage() {
                 </p>
                 <Button
                   disabled={
-                    busy || !settings?.payment_collection_enabled || !paid
+                    busy || isEntitled(sub) ||
+                    !settings?.payment_collection_enabled || !paid
                   }
                   onClick={() =>
                     void act(async () => {
-                      if (!storeId) return;
+                      if (!storeId || isEntitled(sub)) return;
                       const r = await supabase.rpc("sellnova_begin_payment", {
                         _store_id: storeId,
                       });

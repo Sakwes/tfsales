@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { brandingStyle } from "@/lib/branding";
+import { useStoreBranding } from "@/hooks/use-store-branding";
 import { stockState } from "@/lib/plan";
 import { CheckoutDialog } from "@/components/store/CheckoutDialog";
 import { Button } from "@/components/ui/button";
@@ -92,6 +94,8 @@ const StoreFront = () => {
   const [hasReceipt, setHasReceipt] = useState(false);
 
   const loadedStoreId = store?.id;
+  const { branding, logoUrl, clearLogo } = useStoreBranding(loadedStoreId);
+  const theme = brandingStyle(branding);
 
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -361,7 +365,7 @@ const StoreFront = () => {
   }
 
   const cartPanel = (
-    <SheetContent className="flex flex-col w-full sm:max-w-md">
+    <SheetContent style={theme} className="flex flex-col w-full sm:max-w-md">
       <SheetHeader>
         <SheetTitle>Your cart</SheetTitle>
       </SheetHeader>
@@ -466,11 +470,12 @@ const StoreFront = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-24 sm:pb-0">
+    <div style={theme} className="min-h-screen bg-background text-foreground pb-24 sm:pb-0">
       {store && <CheckoutDialog
         key={`${store.id}:${checkoutAttempt}`}
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
+        theme={theme}
         storeId={store.id}
         storeName={store.store_name}
         sellerPhone={whatsappNumber}
@@ -484,11 +489,14 @@ const StoreFront = () => {
         }}
       />}
       {hasReceipt && <div className="p-3 text-center border-b"><Button variant="outline" onClick={() => setCheckoutOpen(true)}>View saved order</Button></div>}
-      <header className="bg-gradient-primary text-white py-8 px-4 sm:px-6 lg:px-8">
+      <header className="bg-gradient-primary text-primary-foreground py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-4 mb-5">
             <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
-              <Store className="h-8 w-8" aria-hidden="true" />
+              {logoUrl ? (
+                <img src={logoUrl} alt={`${store.store_name} logo`}
+                  className="h-16 w-16 object-contain" onError={clearLogo} />
+              ) : <Store className="h-8 w-8" aria-hidden="true" />}
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold break-words">
@@ -498,7 +506,7 @@ const StoreFront = () => {
                 href={whatsAppLink(whatsappNumber)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/90 hover:text-white inline-flex items-center gap-2 mt-1 underline-offset-4 hover:underline">
+                className="text-primary-foreground/90 hover:text-primary-foreground inline-flex items-center gap-2 mt-1 underline-offset-4 hover:underline">
                 <Phone className="h-4 w-4" aria-hidden="true" />
                 {formatPhoneForDisplay(whatsappNumber)}
               </a>
@@ -637,7 +645,7 @@ const StoreFront = () => {
       <Dialog
         open={!!selectedProduct}
         onOpenChange={open => !open && setSelectedProduct(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent style={theme} className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedProduct && (
             <>
               <DialogHeader>

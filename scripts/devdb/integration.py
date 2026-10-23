@@ -86,6 +86,35 @@ def check_seller_store_creation(conn, ids):
     print('PASS authenticated seller store insert/update, helpers, ownership RLS and private ACLs')
 
 
+
+def check_public_branding(conn, ids):
+    """Prepared public/owner RLS contract; no real object upload or data retained."""
+    from psycopg import Rollback
+    with conn.transaction():
+        conn.execute("""INSERT INTO public.store_branding(store_id,primary_color,accent_color,logo_path)
+            VALUES(%s,'#123456','#FF0000',%s) ON CONFLICT(store_id) DO UPDATE
+            SET primary_color=EXCLUDED.primary_color,accent_color=EXCLUDED.accent_color,logo_path=EXCLUDED.logo_path""",
+            (ids['store_a'], str(ids['seller_a'])+'/synthetic-logo.png'))
+        for role, user in (('anon', None), ('authenticated', ids['seller_a'])):
+            with conn.transaction():
+                claim(conn, role, user)
+                branding = conn.execute('SELECT public.sellnova_public_branding(%s)', (ids['store_a'],)).fetchone()[0]
+                assert branding['entitled'] is True and branding['primary_color'] == '#123456'
+                assert branding['logo_path'] == str(ids['seller_a'])+'/synthetic-logo.png'
+                assert conn.execute('SELECT primary_color FROM public.store_branding WHERE store_id=%s', (ids['store_a'],)).fetchone() == ('#123456',)
+        conn.execute('RESET ROLE')
+        conn.execute("UPDATE public.store_subscriptions SET expires_at=now()-interval '1 day' WHERE store_id=%s", (ids['store_a'],))
+        with conn.transaction():
+            claim(conn, 'anon')
+            assert conn.execute('SELECT public.sellnova_public_branding(%s)', (ids['store_a'],)).fetchone()[0] == {'entitled': False}
+            assert conn.execute('SELECT primary_color FROM public.store_branding WHERE store_id=%s', (ids['store_a'],)).fetchall() == []
+        with conn.transaction():
+            claim(conn, 'authenticated', ids['seller_a'])
+            assert conn.execute('SELECT primary_color FROM public.store_branding WHERE store_id=%s', (ids['store_a'],)).fetchone() == ('#123456',)
+        raise Rollback()
+    print('PASS public branding RPC/SELECT RLS for anon and owner, expiry without deleting branding')
+
+
 def run():
     files=load_plan()
     ids={name:uuid4() for name in ['run','seller_a','seller_b','admin','store_a','store_b','product']}
@@ -242,6 +271,7 @@ def run():
             assert buckets=={'product-images':True,'store-logos':False,'payment-proofs':False}
             print('PASS input bounds, private ACLs, analytic rate rejection and bucket privacy metadata')
 
+            check_public_branding(owner, ids)
             from billing_integration import check_billing
             check_billing(owner, ids)
         finally:

@@ -371,7 +371,7 @@ class OfflineSafetyTests(unittest.TestCase):
 
     def test_manifest_contains_exact_eight_historical_files_first(self):
         files=migrate.load_plan()
-        self.assertEqual(len(files),16)
+        self.assertEqual(len(files),17)
         self.assertTrue(all(path.startswith(('supabase/migrations/','drizzle/migrations/')) for path,_,_ in files[:8]))
         self.assertTrue(all(path.startswith('database/development/') for path,_,_ in files[8:]))
 
@@ -387,6 +387,13 @@ class OfflineSafetyTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(json.dumps(entries[:15],sort_keys=True).encode()).hexdigest(),
                          '56e19d588f32af2ee496745f4f91a3b1e9716fa83e436294f307e23c67903090')
         self.assertEqual(entries[15]['path'], 'database/development/corrections/005_subscription_payments.sql')
+        migrate.load_plan()
+
+    def test_payment_guard_preserves_sixteen_migration_entries(self):
+        entries=json.loads(migrate.MANIFEST.read_text())['files']
+        self.assertEqual(hashlib.sha256(json.dumps(entries[:16],sort_keys=True).encode()).hexdigest(),
+                         '5ad99ec36089bd849ec2dd87c3905cacc6f2008ca39c462716d3e569b427df51')
+        self.assertEqual(entries[16]['path'], 'database/development/corrections/006_active_paid_payment_guard.sql')
         migrate.load_plan()
 
     def test_store_creation_integration_default_never_connects(self):

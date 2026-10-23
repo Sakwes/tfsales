@@ -64,6 +64,10 @@
     {
       "path": "database/development/corrections/005_subscription_payments.sql",
       "sha256": "1f9239a1986b8d88057c8e642823fb93d0bd4769ca121753ccbbe625a5feea0e"
+    },
+    {
+      "path": "database/development/corrections/006_active_paid_payment_guard.sql",
+      "sha256": "9cf6c2ea95ffada39a72fdf9e30f4eead1695f0970c57b546e4bda8e0d614ca8"
     }
   ]
 }

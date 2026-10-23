@@ -284,8 +284,18 @@ try {
     page.getByRole("heading", { name: "Current plan: Paid" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Renew Paid access" }),
+    page.getByRole("heading", { name: "Paid access is active" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Get payment instructions" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "I Have Made Payment" })).toHaveCount(0);
+  const quoteCalls = calls.filter(c => c.endpoint === "sellnova_begin_payment").length;
+  history[0].status = "draft";
+  subscription.expires_at = null; // Indefinite active legacy Paid access is also guarded.
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Get payment instructions" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "I Have Made Payment" })).toHaveCount(0);
+  assert.equal(calls.filter(c => c.endpoint === "sellnova_begin_payment").length, quoteCalls);
+  history[0].status = "pending";
   subscription.expires_at = new Date(Date.now() - 86400000).toISOString();
   await page.reload();
   await expect(

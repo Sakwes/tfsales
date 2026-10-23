@@ -56,18 +56,31 @@ def check_billing(conn, ids):
             start, end = conn.execute('SELECT activated_from,activated_until FROM public.subscription_requests WHERE id=%s', (request,)).fetchone()
             assert end-start == timedelta(days=30)
             assert conn.execute('SELECT paid_amount,paid_duration_days FROM public.store_subscriptions WHERE store_id=%s', (ids['store_a'],)).fetchone() == (1500, 30)
+        must_fail(conn, begin_sql, (ids['store_a'],), user=ids['seller_a'])
+        conn.execute('RESET ROLE')
+        conn.execute("UPDATE public.store_subscriptions SET expires_at=NULL WHERE store_id=%s", (ids['store_a'],))
+        must_fail(conn, begin_sql, (ids['store_a'],), user=ids['seller_a'])
+        conn.execute('RESET ROLE')  # Synthetic owner fixture only; simulate natural expiry.
+        conn.execute("UPDATE public.store_subscriptions SET expires_at=now()-interval '1 day' WHERE store_id=%s", (ids['store_a'],))
         renewal = rpc('authenticated', ids['seller_a'], begin_sql, (ids['store_a'],))
+        conn.execute('RESET ROLE')
+        conn.execute("UPDATE public.store_subscriptions SET expires_at=now()+interval '1 day' WHERE store_id=%s", (ids['store_a'],))
+        must_fail(conn, notify_sql, (renewal, 'STALE-'+str(renewal), None), user=ids['seller_a'])
+        conn.execute('RESET ROLE')
+        conn.execute("UPDATE public.store_subscriptions SET expires_at=now()-interval '1 day' WHERE store_id=%s", (ids['store_a'],))
         must_fail(conn, notify_sql, (renewal, 'TEST-'+str(request), None), user=ids['seller_a'])
         rpc('authenticated', ids['seller_a'], notify_sql, (renewal, 'TEST-'+str(renewal), None))
         rpc('authenticated', ids['admin'], review_sql, (renewal, True, True, 'Renewal verified'))
         with conn.transaction():
             claim(conn, 'authenticated', ids['admin'])
             new_start, new_end = conn.execute('SELECT activated_from,activated_until FROM public.subscription_requests WHERE id=%s', (renewal,)).fetchone()
-            assert new_start == end and new_end-new_start == timedelta(days=45)
+            assert new_start >= start and new_end-new_start == timedelta(days=45)
+        conn.execute('RESET ROLE')
+        expired_end = conn.execute("UPDATE public.store_subscriptions SET expires_at=now()-interval '1 day' WHERE store_id=%s RETURNING expires_at", (ids['store_a'],)).fetchone()[0]
         rejected = rpc('authenticated', ids['seller_a'], begin_sql, (ids['store_a'],))
         rpc('authenticated', ids['seller_a'], notify_sql, (rejected, 'TEST-'+str(rejected), None))
         rpc('authenticated', ids['admin'], review_sql, (rejected, False, False, 'No matching transfer'))
-        assert rpc('authenticated', ids['seller_a'], 'SELECT expires_at FROM public.store_subscriptions WHERE store_id=%s', (ids['store_a'],)) == new_end
+        assert rpc('authenticated', ids['seller_a'], 'SELECT expires_at FROM public.store_subscriptions WHERE store_id=%s', (ids['store_a'],)) == expired_end
         rpc('authenticated', ids['admin'], settings_sql, (version+2, 2000, 45, '', '', '', '', False))
         must_fail(conn, begin_sql, (ids['store_a'],), user=ids['seller_a'])
         with conn.transaction():

@@ -39,6 +39,7 @@ const receiptSchema = z.object({
 });
 
 interface Props {
+  theme?: React.CSSProperties;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   storeId: string;
@@ -50,6 +51,7 @@ interface Props {
 }
 
 export function CheckoutDialog({
+  theme,
   open,
   onOpenChange,
   storeId,
@@ -223,7 +225,7 @@ export function CheckoutDialog({
         if (!inFlight.current) onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent style={theme} className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{receipt ? "Order saved" : "Checkout"}</DialogTitle>
           <DialogDescription>
