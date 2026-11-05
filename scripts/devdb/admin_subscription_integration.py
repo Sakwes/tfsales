@@ -129,6 +129,12 @@ def check_admin_subscriptions(conn, ids):
         assert state()['source'] == 'payment' and state()['revision'] != grant['subscription']['revision']
         must_fail(conn, SET, command(grant['subscription'], 'free'), user=admin, states=('P0001',))
         must_fail(conn, 'SELECT public.sellnova_review_payment(%s,true,true,NULL)', (request,), user=admin, states=('P0001',))
+        payment_history = conn.execute('SELECT to_jsonb(r) FROM public.subscription_requests r WHERE id=%s', (request,)).fetchone()[0]
+        for action, expiry in (('paid', future(7)), ('free', None)):
+            override = rpc(conn, SET, command(state(), action, expiry))
+            assert override['subscription']['source'] == 'admin'
+            assert conn.execute('SELECT source_request_id,paid_amount,paid_duration_days FROM public.store_subscriptions WHERE store_id=%s', (store,)).fetchone() == (None, None, None)
+            assert conn.execute('SELECT to_jsonb(r) FROM public.subscription_requests r WHERE id=%s', (request,)).fetchone()[0] == payment_history
         raise Rollback()
 
     # Simultaneous bank approval and a manual grant: approval either invalidates the
@@ -166,4 +172,6 @@ def check_admin_subscriptions(conn, ids):
     assert expired['plan'] == 'free' and expired['allowance'] == 12 and expired['effective_status'] == 'expired'
     assert rpc(conn, SET, expiring)['replayed'] is True and state()['plan'] == 'free'
     assert rpc(conn, SET, command(state(), expiry=future()))['subscription']['plan'] == 'paid'
+    from subscription_lock_integration import check_subscription_locks
+    check_subscription_locks(conn, ids)
     print('PASS admin grants/downgrades/history, ACLs, concurrent revisions/replay, bank coexistence and wall-clock expiry')

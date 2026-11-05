@@ -1,4 +1,4 @@
--- DEVELOPMENT ONLY. Proposed manifest entry 19; unapplied pending ledger verification/review.
+-- DEVELOPMENT ONLY. Revised entry 19 after pre-execution review; still unapplied.
 DO $$ BEGIN
  IF current_setting('sellnova.dev_project_ref',true) IS DISTINCT FROM 'qfcnaceeppgrquoszkor' THEN
   RAISE EXCEPTION 'Development runner context required'; END IF;
@@ -24,9 +24,8 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS 
 BEGIN
  IF TG_OP='UPDATE' AND NEW.store_id IS DISTINCT FROM OLD.store_id THEN
   RAISE EXCEPTION 'Subscription store identity is immutable'; END IF;
- -- Also serialize trusted inserts when no subscription row exists yet. Raw trusted
- -- updates must take this lock before row locks to avoid a fail-closed deadlock.
- PERFORM pg_advisory_xact_lock(hashtextextended(NEW.store_id::text,921));
+ -- Row UPDATE locks already exist here: never wait for an advisory lock in this trigger.
+ -- RPCs lock up front; conditional upserts below also detect trusted insert races.
  NEW.revision:=gen_random_uuid();
  RETURN NEW;
 END $$;
@@ -48,7 +47,7 @@ CREATE FUNCTION sellnova_dev.require_subscription_admin()
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
 BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
- PERFORM 1 FROM public.user_roles WHERE user_id=auth.uid() AND role='admin' FOR SHARE;
+ PERFORM 1 FROM public.user_roles WHERE user_id=auth.uid() AND role='admin' FOR SHARE NOWAIT;
  IF NOT FOUND THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
 END $$;
 
@@ -66,31 +65,40 @@ BEGIN
  IF p.id IS NULL THEN SELECT * INTO p FROM public.plans WHERE code='free' AND is_active; END IF;
  RETURN p;
 END $$;
-CREATE OR REPLACE FUNCTION public.sellnova_publication_limit(_store_id uuid)
+-- One supplied evaluation instant keeps returned expiry/status/counts consistent.
+CREATE FUNCTION sellnova_dev.publication_limit_at(_store_id uuid,_at timestamptz)
 RETURNS integer LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
  SELECT CASE WHEN EXISTS(SELECT 1 FROM public.store_subscriptions ss JOIN public.plans pl ON pl.id=ss.plan_id
   WHERE ss.store_id=_store_id AND ss.status='active' AND pl.code='paid' AND pl.is_active
-   AND (ss.expires_at IS NULL OR ss.expires_at>clock_timestamp())) THEN 50 ELSE 12 END;
+   AND (ss.expires_at IS NULL OR ss.expires_at>_at)) THEN 50 ELSE 12 END;
+$$;
+CREATE OR REPLACE FUNCTION public.sellnova_publication_limit(_store_id uuid)
+RETURNS integer LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
+ SELECT sellnova_dev.publication_limit_at(_store_id,clock_timestamp());
 $$;
 CREATE OR REPLACE FUNCTION public.sellnova_store_max_products(_store_id uuid)
 RETURNS integer LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
- SELECT public.sellnova_publication_limit(_store_id);
+ -- Preserve the original inactive-store visibility restriction of this public helper.
+ SELECT coalesce((public.sellnova_effective_plan(_store_id)).max_products,12);
 $$;
 CREATE OR REPLACE FUNCTION public.sellnova_publication_state(_store_id uuid)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE allowance integer; selected uuid[]; visible uuid[]; saved integer; revision text; sub public.store_subscriptions;
+DECLARE allowance integer; selected uuid[]; visible uuid[]; saved integer; revision text; sub public.store_subscriptions; at_time timestamptz:=clock_timestamp();
 BEGIN
  IF auth.uid() IS NULL OR NOT (EXISTS(SELECT 1 FROM public.stores WHERE id=_store_id AND seller_id=auth.uid())
   OR public.has_role(auth.uid(),'admin')) THEN RAISE EXCEPTION 'Store ownership required'; END IF;
- allowance:=public.sellnova_publication_limit(_store_id);
+ allowance:=sellnova_dev.publication_limit_at(_store_id,at_time);
  SELECT count(*),coalesce(array_agg(id ORDER BY created_at,id) FILTER(WHERE publication_selected),'{}'::uuid[]),
   md5(allowance::text||coalesce(jsonb_agg(jsonb_build_array(id,publication_selected) ORDER BY id)::text,'[]'))
   INTO saved,selected,revision FROM public.products WHERE store_id=_store_id;
- SELECT coalesce(array_agg(id),'{}'::uuid[]) INTO visible FROM public.sellnova_public_product_ids(_store_id) id;
+ SELECT coalesce(array_agg(id),'{}'::uuid[]) INTO visible FROM (
+  SELECT p.id FROM public.products p JOIN public.stores s ON s.id=p.store_id
+  WHERE p.store_id=_store_id AND s.is_active AND p.publication_selected
+  ORDER BY p.created_at,p.id LIMIT allowance) effective_public;
  SELECT * INTO sub FROM public.store_subscriptions WHERE store_id=_store_id;
  RETURN jsonb_build_object('plan',CASE WHEN allowance=50 THEN 'paid' ELSE 'free' END,
-  'status',CASE WHEN sub.status='active' AND sub.expires_at<=clock_timestamp() THEN 'expired' ELSE coalesce(sub.status,'free') END,
-  'expires_at',sub.expires_at,'server_time',clock_timestamp(),'allowance',allowance,'saved_count',saved,
+  'status',CASE WHEN sub.status='active' AND sub.expires_at<=at_time THEN 'expired' ELSE coalesce(sub.status,'free') END,
+  'expires_at',sub.expires_at,'server_time',at_time,'allowance',allowance,'saved_count',saved,
   'selected_ids',selected,'visible_ids',visible,'version',revision);
 END $$;
 
@@ -98,13 +106,13 @@ END $$;
 CREATE FUNCTION sellnova_dev.subscription_row(_store_id uuid)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog AS $$
 DECLARE s public.stores; sub public.store_subscriptions; allowance integer; effective text; saved integer;
- selected integer; visible integer; pending integer; email text;
+ selected integer; visible integer; pending integer; email text; at_time timestamptz:=clock_timestamp();
 BEGIN
  SELECT * INTO s FROM public.stores WHERE id=_store_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store unavailable'; END IF;
  SELECT * INTO sub FROM public.store_subscriptions WHERE store_id=_store_id;
- allowance:=public.sellnova_publication_limit(_store_id);
- effective:=CASE WHEN sub.status='active' AND sub.expires_at<=clock_timestamp() THEN 'expired'
+ allowance:=sellnova_dev.publication_limit_at(_store_id,at_time);
+ effective:=CASE WHEN sub.status='active' AND sub.expires_at<=at_time THEN 'expired'
   ELSE coalesce(sub.status,'free') END;
  SELECT count(*),count(*) FILTER(WHERE publication_selected) INTO saved,selected FROM public.products WHERE store_id=_store_id;
  visible:=CASE WHEN s.is_active THEN least(selected,allowance) ELSE 0 END;
@@ -113,7 +121,7 @@ BEGIN
  RETURN jsonb_build_object('store_id',s.id,'seller_id',s.seller_id,'store_name',s.store_name,'seller_email',email,
   'plan',CASE WHEN allowance=50 THEN 'paid' ELSE 'free' END,'stored_status',coalesce(sub.status,'free'),
   'effective_status',effective,'expires_at',sub.expires_at,
-  'stored_plan_id',sub.plan_id,'started_at',sub.started_at,'source_request_id',sub.source_request_id,
+  'stored_revision',sub.revision,'stored_plan_id',sub.plan_id,'started_at',sub.started_at,'source_request_id',sub.source_request_id,
   'paid_amount',sub.paid_amount,'paid_duration_days',sub.paid_duration_days,
   'source',CASE WHEN sub.store_id IS NULL THEN 'implicit_free' WHEN sub.latest_source='legacy' AND sub.source_request_id IS NOT NULL
    THEN 'payment' ELSE sub.latest_source END,
@@ -193,11 +201,11 @@ BEGIN
  END IF;
  IF _action IS NULL OR _action NOT IN ('paid','free') OR length(btrim(coalesce(_reason,''))) NOT BETWEEN 1 AND 1000
   OR _expected_revision IS NULL OR length(_expected_revision) NOT BETWEEN 1 AND 200
-  OR (_action='paid' AND (_expires_at IS NULL OR NOT isfinite(_expires_at) OR _expires_at<=clock_timestamp()))
+  OR (_action='paid' AND (_expires_at IS NULL OR NOT isfinite(_expires_at) OR _expires_at>='10000-01-01 00:00:00+00'::timestamptz OR _expires_at<=clock_timestamp()))
   OR (_action='free' AND _expires_at IS NOT NULL) THEN RAISE EXCEPTION 'Invalid manual subscription command'; END IF;
  -- Same store lock as product insertion/selection/checkout, then bank-workflow row lock.
  PERFORM pg_advisory_xact_lock(hashtextextended(_store_id::text,921));
- PERFORM 1 FROM public.stores WHERE id=_store_id FOR UPDATE;
+ PERFORM 1 FROM public.stores WHERE id=_store_id FOR NO KEY UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store unavailable'; END IF;
  PERFORM 1 FROM public.store_subscriptions WHERE store_id=_store_id FOR UPDATE;
  before_row:=sellnova_dev.subscription_row(_store_id);
@@ -210,11 +218,12 @@ BEGIN
  VALUES(_store_id,pid,CASE WHEN _action='paid' THEN 'active' ELSE 'free' END,
   CASE WHEN _action='paid' THEN clock_timestamp() ELSE NULL END,_expires_at,'admin')
  ON CONFLICT(store_id) DO UPDATE SET plan_id=EXCLUDED.plan_id,status=EXCLUDED.status,
-  started_at=CASE WHEN _action='paid' AND before_row->>'plan'='paid' AND public.store_subscriptions.status='active'
-   AND (public.store_subscriptions.expires_at IS NULL OR public.store_subscriptions.expires_at>clock_timestamp())
-   THEN public.store_subscriptions.started_at ELSE EXCLUDED.started_at END,
-  expires_at=EXCLUDED.expires_at,latest_source='admin',updated_at=clock_timestamp();
- -- source_request_id/paid_amount/paid_duration_days retain payment provenance; latest_source distinguishes grants.
+  started_at=EXCLUDED.started_at,expires_at=EXCLUDED.expires_at,latest_source='admin',
+  source_request_id=NULL,paid_amount=NULL,paid_duration_days=NULL,updated_at=clock_timestamp()
+ WHERE public.store_subscriptions.revision::text IS NOT DISTINCT FROM before_row->>'stored_revision';
+ IF NOT FOUND THEN RAISE EXCEPTION 'Subscription changed; reload before saving'; END IF;
+ -- The current entitlement is an admin grant, not a payment. Historical payment
+ -- rows and the before-audit snapshot retain the original receipt/amount/duration.
  after_row:=sellnova_dev.subscription_row(_store_id);
  SELECT email INTO actor_label FROM auth.users WHERE id=auth.uid();
  INSERT INTO public.admin_audit_log(actor_id,store_id,action,details,created_at)
@@ -235,7 +244,7 @@ BEGIN
  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
  -- Advisory-then-store order also coordinates manual grants and publication.
  PERFORM pg_advisory_xact_lock(hashtextextended(_store_id::text,921));
- PERFORM 1 FROM public.stores WHERE id=_store_id AND seller_id=auth.uid() FOR UPDATE;
+ PERFORM 1 FROM public.stores WHERE id=_store_id AND seller_id=auth.uid() FOR NO KEY UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store ownership required'; END IF;
  IF EXISTS(SELECT 1 FROM public.store_subscriptions ss JOIN public.plans pl ON pl.id=ss.plan_id
   WHERE ss.store_id=_store_id AND pl.code='paid' AND ss.status='active'
@@ -261,7 +270,7 @@ BEGIN
  SELECT store_id INTO sid FROM public.subscription_requests WHERE id=_request_id;
  PERFORM pg_advisory_xact_lock(hashtextextended(sid::text,921));
  -- Same advisory/store/request order as approval and manual changes.
- PERFORM 1 FROM public.stores WHERE id=sid AND seller_id=auth.uid() FOR UPDATE;
+ PERFORM 1 FROM public.stores WHERE id=sid AND seller_id=auth.uid() FOR NO KEY UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Payment request unavailable'; END IF;
  SELECT * INTO r FROM public.subscription_requests WHERE id=_request_id FOR UPDATE;
  IF NOT FOUND OR auth.uid() IS NULL OR NOT EXISTS(SELECT 1 FROM public.stores WHERE id=r.store_id AND seller_id=auth.uid()) THEN
@@ -294,14 +303,16 @@ BEGIN
  SELECT store_id INTO sid FROM public.subscription_requests WHERE id=_request_id;
  IF sid IS NULL THEN RAISE EXCEPTION 'Payment request unavailable'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(sid::text,921));
- PERFORM 1 FROM public.stores WHERE id=sid FOR UPDATE;
+ PERFORM 1 FROM public.stores WHERE id=sid FOR NO KEY UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'Store unavailable'; END IF;
  SELECT * INTO r FROM public.subscription_requests WHERE id=_request_id FOR UPDATE;
  IF NOT FOUND OR r.status<>'pending' THEN RAISE EXCEPTION 'Request is unavailable or already reviewed'; END IF;
  before_row:=sellnova_dev.subscription_row(sid);
  IF _approve THEN
   IF r.payment_snapshot IS NULL OR r.settings_version IS NULL OR r.duration_days NOT BETWEEN 1 AND 365
-   OR r.duration_days IS NULL OR r.amount IS NULL OR r.amount<=0 OR NOT EXISTS(
+   OR r.duration_days IS NULL OR r.amount IS NULL OR r.amount<=0 OR r.amount::text IN ('NaN','Infinity','-Infinity')
+   OR r.payment_snapshot->'price_ngn' IS DISTINCT FROM to_jsonb(r.amount)
+   OR r.payment_snapshot->'duration_days' IS DISTINCT FROM to_jsonb(r.duration_days) OR NOT EXISTS(
     SELECT 1 FROM public.plans WHERE id=r.plan_id AND code='paid' AND is_active) THEN
    RAISE EXCEPTION 'Legacy payment requires reconciliation; reject and request a new quote'; END IF;
   SELECT * INTO cur FROM public.store_subscriptions WHERE store_id=r.store_id FOR UPDATE;
@@ -317,7 +328,9 @@ BEGIN
    started_at=CASE WHEN current_paid AND public.store_subscriptions.expires_at>at_time
     THEN public.store_subscriptions.started_at ELSE EXCLUDED.started_at END,
    expires_at=ends,source_request_id=r.id,paid_amount=r.amount,paid_duration_days=r.duration_days,
-   latest_source='payment',updated_at=clock_timestamp();
+   latest_source='payment',updated_at=clock_timestamp()
+  WHERE public.store_subscriptions.revision IS NOT DISTINCT FROM cur.revision;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Subscription changed; retry payment review'; END IF;
  END IF;
  UPDATE public.subscription_requests SET status=CASE WHEN _approve THEN 'approved' ELSE 'rejected' END,
   reviewed_by=auth.uid(),reviewed_at=clock_timestamp(),decision_reason=_reason,
@@ -332,9 +345,112 @@ BEGIN
  RETURN jsonb_build_object('ok',true);
 END $$;
 
+-- Deprecated writers remain present for dependency compatibility but cannot mutate
+-- records, including through service-role calls with an administrator subject.
+CREATE OR REPLACE FUNCTION public.sellnova_set_subscription_state(
+ _store_id uuid,_status text,_extend_days integer DEFAULT NULL,_reason text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ RAISE EXCEPTION 'Legacy subscription setter retired; use the reviewed administrator RPC' USING ERRCODE='42501';
+END $$;
+CREATE OR REPLACE FUNCTION public.sellnova_decide_subscription(
+ _request_id uuid,_approve boolean,_reason text DEFAULT NULL,_duration_days integer DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ RAISE EXCEPTION 'Legacy payment decision retired; use verified payment review' USING ERRCODE='42501';
+END $$;
+
+-- Order UPDATE already owns an order row. A late blocking advisory wait can
+-- cycle with store deletion/checkout. Fail atomically for retry instead of waiting.
+CREATE OR REPLACE FUNCTION public.sellnova_orders_before_update()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $$
+DECLARE allowed text[]; item record; product public.products; movements jsonb := '[]';
+BEGIN
+  IF (to_jsonb(NEW) - ARRAY['status','delivery_fee','total','updated_at','review_token','review_submitted','stock_applied','promotion_id'])
+     IS DISTINCT FROM
+     (to_jsonb(OLD) - ARRAY['status','delivery_fee','total','updated_at','review_token','review_submitted','stock_applied','promotion_id']) THEN
+    RAISE EXCEPTION 'Order details are immutable';
+  END IF;
+  -- Permit FK ON DELETE SET NULL; clients have no UPDATE grant on promotion_id.
+  IF NEW.promotion_id IS DISTINCT FROM OLD.promotion_id AND NEW.promotion_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Promotion reference is immutable';
+  END IF;
+  IF NEW.stock_applied IS DISTINCT FROM OLD.stock_applied THEN
+    RAISE EXCEPTION 'Stock state is server controlled';
+  END IF;
+  IF NEW.review_submitted IS DISTINCT FROM OLD.review_submitted THEN
+    -- Only the definer review RPC has UPDATE privilege on these columns.
+    IF OLD.status <> 'completed' OR OLD.review_submitted OR NOT NEW.review_submitted
+       OR NEW.review_token IS NOT NULL THEN RAISE EXCEPTION 'Invalid review transition'; END IF;
+  ELSIF NEW.review_token IS DISTINCT FROM OLD.review_token THEN
+    RAISE EXCEPTION 'Review token is server controlled';
+  END IF;
+  IF NEW.delivery_fee IS NULL OR NEW.delivery_fee < 0 OR NEW.delivery_fee > 1000000000
+     OR NEW.delivery_fee::text IN ('NaN','Infinity','-Infinity') THEN
+    RAISE EXCEPTION 'Invalid delivery fee';
+  END IF;
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    allowed := CASE OLD.status
+      WHEN 'new' THEN ARRAY['confirmed','cancelled']
+      WHEN 'confirmed' THEN ARRAY['processing','cancelled']
+      WHEN 'processing' THEN ARRAY['ready','cancelled']
+      WHEN 'ready' THEN ARRAY['completed','cancelled'] ELSE ARRAY[]::text[] END;
+    IF NEW.status IS NULL OR NOT (NEW.status=ANY(allowed)) THEN RAISE EXCEPTION 'Invalid order status transition'; END IF;
+    IF NEW.status='confirmed' THEN
+      IF NOT pg_try_advisory_xact_lock(hashtextextended(OLD.store_id::text,921)) THEN
+        RAISE EXCEPTION 'Store is busy; retry the order update' USING ERRCODE='40001'; END IF;
+      IF OLD.stock_applied THEN RAISE EXCEPTION 'Stock was already applied'; END IF;
+      IF EXISTS(SELECT 1 FROM public.order_items WHERE order_id=OLD.id AND product_id IS NULL)
+         OR NOT EXISTS(SELECT 1 FROM public.order_items WHERE order_id=OLD.id) THEN
+        RAISE EXCEPTION 'An ordered product no longer exists; cancel this order';
+      END IF;
+      FOR item IN SELECT product_id,sum(quantity)::integer AS qty
+        FROM public.order_items WHERE order_id=OLD.id GROUP BY product_id ORDER BY product_id LOOP
+        SELECT * INTO product FROM public.products WHERE id=item.product_id AND store_id=OLD.store_id FOR UPDATE;
+        IF NOT FOUND OR NOT product.is_available THEN RAISE EXCEPTION 'An ordered product is unavailable'; END IF;
+        IF product.track_stock THEN
+          IF product.stock_quantity<item.qty THEN
+            RAISE EXCEPTION 'Insufficient stock for %. Need %, available %',product.name,item.qty,product.stock_quantity;
+          END IF;
+          UPDATE public.products SET stock_quantity=stock_quantity-item.qty WHERE id=product.id;
+          UPDATE public.order_items SET deducted_quantity=quantity WHERE order_id=OLD.id AND product_id=product.id;
+          movements := movements || jsonb_build_array(jsonb_build_object('product_id',product.id,'quantity',-item.qty));
+        END IF;
+      END LOOP;
+      NEW.stock_applied := jsonb_array_length(movements)>0;
+    END IF;
+    IF NEW.status='cancelled' AND OLD.stock_applied THEN
+      IF NOT pg_try_advisory_xact_lock(hashtextextended(OLD.store_id::text,921)) THEN
+        RAISE EXCEPTION 'Store is busy; retry the order update' USING ERRCODE='40001'; END IF;
+      FOR item IN SELECT product_id,sum(deducted_quantity)::integer AS deducted
+        FROM public.order_items WHERE order_id=OLD.id AND product_id IS NOT NULL
+        GROUP BY product_id ORDER BY product_id LOOP
+        IF item.deducted=0 THEN CONTINUE; END IF;
+        -- Restore the actual deduction regardless of current tracking/entitlement.
+        PERFORM 1 FROM public.products WHERE id=item.product_id FOR UPDATE;
+        IF FOUND THEN
+          UPDATE public.products SET stock_quantity=stock_quantity+item.deducted WHERE id=item.product_id;
+          movements := movements || jsonb_build_array(jsonb_build_object('product_id',item.product_id,'quantity',item.deducted));
+        END IF;
+      END LOOP;
+      NEW.stock_applied := false;
+    END IF;
+    INSERT INTO sellnova_dev.order_events(order_id,from_status,to_status,actor_id,stock_movements)
+      VALUES(OLD.id,OLD.status,NEW.status,auth.uid(),movements);
+    IF NEW.status='completed' THEN
+      NEW.review_token := encode(extensions.gen_random_bytes(24),'hex');
+    END IF;
+  END IF;
+  NEW.total := greatest(OLD.subtotal-OLD.discount_total,0)+NEW.delivery_fee;
+  NEW.updated_at := now();
+  RETURN NEW;
+END $$;
+
+
 -- No frontend access to private helpers, receipts, trigger or legacy setters.
 REVOKE ALL ON FUNCTION sellnova_dev.subscription_revision(),sellnova_dev.require_subscription_admin(),
- sellnova_dev.subscription_row(uuid),sellnova_dev.subscription_snapshot(jsonb) FROM PUBLIC,anon,authenticated,service_role;
+ sellnova_dev.subscription_row(uuid),sellnova_dev.subscription_snapshot(jsonb),
+ sellnova_dev.publication_limit_at(uuid,timestamptz) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION public.sellnova_admin_list_subscriptions(text,text,integer,integer,uuid),
  public.sellnova_admin_subscription_history(uuid,integer,integer),
  public.sellnova_admin_set_subscription(uuid,text,timestamptz,text,text,uuid) FROM PUBLIC,anon;
@@ -342,7 +458,7 @@ GRANT EXECUTE ON FUNCTION public.sellnova_admin_list_subscriptions(text,text,int
  public.sellnova_admin_subscription_history(uuid,integer,integer),
  public.sellnova_admin_set_subscription(uuid,text,timestamptz,text,text,uuid) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public.sellnova_set_subscription_state(uuid,text,integer,text),
- public.sellnova_decide_subscription(uuid,boolean,text,integer) FROM PUBLIC,anon,authenticated;
+ public.sellnova_decide_subscription(uuid,boolean,text,integer) FROM PUBLIC,anon,authenticated,service_role;
 
 -- Roll back the entire migration if a previously inherited privilege reopens a write path.
 DO $$ DECLARE t text; f text; BEGIN
@@ -360,6 +476,8 @@ DO $$ DECLARE t text; f text; BEGIN
  END LOOP;
  IF has_function_privilege('authenticated','public.sellnova_set_subscription_state(uuid,text,integer,text)','EXECUTE')
   OR has_function_privilege('authenticated','public.sellnova_decide_subscription(uuid,boolean,text,integer)','EXECUTE')
+  OR has_function_privilege('service_role','public.sellnova_set_subscription_state(uuid,text,integer,text)','EXECUTE')
+  OR has_function_privilege('service_role','public.sellnova_decide_subscription(uuid,boolean,text,integer)','EXECUTE')
   OR has_schema_privilege('authenticated','sellnova_dev','USAGE')
   OR has_table_privilege('authenticated','sellnova_dev.subscription_operations','SELECT,INSERT,UPDATE,DELETE')
   OR NOT (SELECT relrowsecurity FROM pg_class WHERE oid='sellnova_dev.subscription_operations'::regclass)

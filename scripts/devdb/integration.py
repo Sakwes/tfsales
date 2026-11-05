@@ -200,12 +200,19 @@ def run():
             orders=[owner.execute('SELECT id FROM public.orders WHERE order_reference=%s',(r['order_reference'],)).fetchone()[0] for r in pending]
             def confirm(order_id):
                 import psycopg
-                try:
-                    with connect_verified() as conn,conn.transaction():
-                        claim(conn,'authenticated',ids['seller_a'])
-                        conn.execute("UPDATE public.orders SET status='confirmed' WHERE id=%s",(order_id,))
-                    return 'confirmed'
-                except psycopg.Error as error:return error.sqlstate
+                import time
+                # A late order-trigger lock conflict aborts its whole transaction.
+                # Retry only 40001, bounded; retain all original stock/audit assertions.
+                for attempt in range(3):
+                    try:
+                        with connect_verified() as conn,conn.transaction():
+                            claim(conn,'authenticated',ids['seller_a'])
+                            conn.execute("UPDATE public.orders SET status='confirmed' WHERE id=%s",(order_id,))
+                        return 'confirmed'
+                    except psycopg.Error as error:
+                        if error.sqlstate!='40001' or attempt==2:
+                            return error.sqlstate
+                        time.sleep(0.05*(attempt+1))
             same_order=owner.execute('SELECT id FROM public.orders WHERE order_reference=%s',(pending[0]['order_reference'],)).fetchone()[0]
             with ThreadPoolExecutor(max_workers=2) as executor:repeated=list(executor.map(confirm,[same_order,same_order]))
             assert repeated==['confirmed','confirmed']

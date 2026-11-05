@@ -1,22 +1,18 @@
 # Sprint 4C backend preparation — review before execution
 
-Prepared 5 November 2026 (Africa/Lagos), in `/workspace/work/sellnova-4c` on
-`sellnova-v2-development`, based on `d72a59132fb1163908264f180ffbdfd08f79e11f`.
-No new commit, staging, push, deployment, database connection, SQL execution,
-live subscription change, deletion or reset occurred. All accepted frontend files
-are preserved. The older `SPRINT_4C_PHASE2_REVIEW.md` documents the preceding
-frontend-only stage; this report supersedes its backend-blocked status.
-
-The user has now authorized preparing migration 19 without a live connection.
-The deployed ledger is still **not independently verified**. It must be verified
-in the approved local Windows environment and reviewed before execution is
-separately authorized. Local checks and browser mocks do not establish deployed
-catalog compatibility or runtime database correctness.
+Updated during the pre-execution review in `/workspace/work/sellnova-4c` on
+`sellnova-v2-development`. Baseline `28030b9bd2bd3f91eb2988b13ed693ce6c3af221`
+was committed and pushed with user approval. The current corrections are
+uncommitted and unapplied; see `SPRINT_4C_PRE_EXECUTION_REVIEW.md` for the explicit
+old/new checksum comparison, findings and lock inventory. The user reports
+independent verification of the deployed eighteen-entry history; no database
+connection or SQL execution was performed by Codex for this review. A match to
+the old migration checksum does not approve the corrected candidate.
 
 ## Proposed migration and order
 
 Manifest entry 19: `database/development/corrections/008_admin_subscription_management.sql`.
-SHA-256: `bfedfd42aa9316675c3a55d8a1a0f5f18a09a9cfa84c980dcadfe1a280e9e662`.
+SHA-256: `bf33cccea4ea7ef73fde4d6eb9ae55ced682be6bc63938b62a00e231dc681bde`.
 Entries 1–18, their SQL bytes, hashes and ordering are unchanged. Only entry 19
 is appended. The existing runner checks every manifest checksum and deployed
 ledger entry, runs unapplied entries in order in one transaction, records the
@@ -62,7 +58,8 @@ per-store publication/checkout advisory lock (seed 921), then the store row and
 subscription row. Bank begin/notify/review use the same advisory/store order,
 then request/subscription locks. Product creation and selection already use 921.
 Absent subscription rows are safe: per-store serialization precedes creation.
-The revision trigger also acquires 921 for trusted inserts outside these RPCs.
+The revision trigger never acquires advisory locks. Store rows use NO KEY UPDATE
+to permit FK checks, and conditional upserts reject trusted concurrent inserts.
 
 A private `sellnova_dev.subscription_operations` table retains one receipt per
 UUID. Reuse with another actor, store, reason, expiry, action or revision fails.
@@ -80,12 +77,10 @@ status, expiry, start, source and preserved payment provenance. Server identity
 and timestamp are authoritative. Suspended subscriptions cannot be cleared by
 this RPC. Inactive stores remain inactive.
 
-The revision trigger serializes trusted writes too, but a trusted raw UPDATE or
-legacy service-only writer that locks a subscription row before advisory 921
-can deadlock with these RPCs. PostgreSQL aborts a transaction rather than losing
-an update; lock timeouts also fail closed. Future privileged maintenance must
-use the documented advisory/store/subscription order and its own audit process.
-Raw privileged DML is not an alternative admin management interface.
+The pre-execution correction removes the late-trigger lock inversion. Legacy
+setter/decision functions are denied even to service_role. Order triggers use
+nonblocking advisory acquisition and atomically reject contention with 40001.
+See the focused report for the full lock graph and remaining runtime checks.
 
 ### Bank transfer coordination and history
 
@@ -102,11 +97,12 @@ source and adds richer audit details atomically. A prior manual token becomes
 stale if payment approval wins the lock first. If a manual grant wins first,
 approval extends the latest expiry. Rejection does not change entitlement.
 
-Manual grants never create payment requests or paid amounts. Existing
-`source_request_id`, `paid_amount` and `paid_duration_days` remain historical
-provenance; `latest_source` distinguishes the latest manual action. The next
-actual approval updates those provenance fields normally. Original receipts,
-proofs, payment amounts and activation dates remain in payment history.
+Manual grants never create payment requests or paid amounts. They clear
+`source_request_id`, `paid_amount` and `paid_duration_days` from the current
+entitlement projection and reset its start to the manual grant time (NULL for
+Free). Old values survive in the before-audit snapshot and original immutable
+payment request/approval history. The next actual approval supplies its own
+payment provenance normally. No historical payment record is rewritten.
 
 ### Free 12 / Paid 50, expiry and restoration
 
@@ -140,17 +136,17 @@ setter grants, anonymous admin RPCs, private access or wrong plan limits.
 
 Passed in this workspace:
 
-- 50 offline tests (40 accepted tests plus 10 backend contract/regression tests).
+- 56 offline tests, including six additional pre-execution review regressions.
   New tests use parsed SQL/AST and deliberate unsafe source mutations, including
   removed authorization, weakened search paths/security, broadened grants,
   missing locks, destructive SQL and subscription-record backfills.
-- SQL and PL/pgSQL grammar parsing: 19 manifest files, 402 top-level statements.
+- SQL and PL/pgSQL grammar parsing: 19 manifest files, 406 top-level statements.
   Catalog name/type resolution is not performed by this offline parser.
 - Manifest integrity: the exact first 18 entries and their bytes match HEAD;
   checksums match all 19 files. New regression pins the 18-entry fingerprint.
 - Original integration execution and real-user rejection guard blocks are
-  byte-identical; regressions pin both blocks. Only the scenario hook and
-  scoped synthetic operation-receipt cleanup were added to the harness.
+  byte-identical; regressions pin both blocks. The execution/real-user guard blocks stay unchanged; scenario hooks, scoped
+  synthetic cleanup and bounded whole-transaction 40001 retries are prepared.
 - TypeScript app/node checks, ESLint (0 errors, 14 pre-existing warnings), build
   (existing Browserslist and bundle-size warnings), Python compilation and
   whitespace checks.
@@ -174,7 +170,7 @@ manual/bank races, preserved pending quotes, one-time payment extension and
 wall-clock expiry/recovery/renewal. The existing Sprint 4B publication tests now
 expect 50/51 rather than 100/101 and retain expiry/restoration checks.
 
-Remaining verification: deployed 18-entry ledger; real catalog compilation,
+The user reports the 18-entry ledger matches. Remaining verification: real catalog compilation,
 function ownership/ACLs/RLS under PostgREST; concurrency and rollback behavior;
 actual timed expiry/renewal restoration across pages; preservation/visibility of
 legacy catalogs over 50; and native Windows Python 3.14.6 execution. These are
@@ -211,7 +207,7 @@ npm run build
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 npm run test:browser
 if ($LASTEXITCODE -ne 0) { throw 'Browser mocks failed' }
-$expected = 'bfedfd42aa9316675c3a55d8a1a0f5f18a09a9cfa84c980dcadfe1a280e9e662'
+$expected = 'bf33cccea4ea7ef73fde4d6eb9ae55ced682be6bc63938b62a00e231dc681bde'
 if ((Get-FileHash database/development/corrections/008_admin_subscription_management.sql -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Migration checksum differs' }
 ```
 
@@ -262,7 +258,7 @@ The existing migration runner/approval gates are not changed by this work.
 
 ```powershell
 if ((git branch --show-current).Trim() -ne 'sellnova-v2-development') { throw 'Wrong branch' }
-$expected = 'bfedfd42aa9316675c3a55d8a1a0f5f18a09a9cfa84c980dcadfe1a280e9e662'
+$expected = 'bf33cccea4ea7ef73fde4d6eb9ae55ced682be6bc63938b62a00e231dc681bde'
 if ((Get-FileHash database/development/corrections/008_admin_subscription_management.sql -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Unreviewed SQL bytes' }
 & $py scripts/devdb/verify_history.py --check --expected-count 18 --output work/development-history-before-19.json
 if ($LASTEXITCODE -ne 0) { throw 'History prerequisite failed' }
@@ -334,7 +330,7 @@ Accepted baseline retained (16 files, unchanged in this backend stage):
 - `scripts/devdb/test_history_offline.py`
 - `docs/SPRINT_4C_PHASE2_REVIEW.md`
 
-All 24 files remain unstaged, uncommitted and unpushed for review. Original
-`/workspace/tfsales`, `main`, production and the deployed development database
-remain untouched. No migration execution authorization is inferred from approval
-of source preparation or successful offline checks.
+The original 24-file baseline was committed/pushed as `28030b9`. Corrections
+listed in `SPRINT_4C_PRE_EXECUTION_REVIEW.md` remain uncommitted/unpushed. Original
+checkout, main, production and live records remain untouched. Re-review the new
+SHA before any transfer or execution authorization.

@@ -55,6 +55,17 @@ def validate_boundary(sql):
             raise ValueError('Missing shared store lock')
         if body.index(',921)') > body.index('FROM public.stores'):
             raise ValueError('Inconsistent store lock order')
+        if 'FROM public.stores' in body and 'FOR NO KEY UPDATE' not in body:
+            raise ValueError('Store FK lock conflict')
+    if 'advisory_xact_lock(' in funcs['sellnova_dev.subscription_revision'][2]:
+        raise ValueError('Late trigger lock inversion')
+    manual = funcs['public.sellnova_admin_set_subscription'][2]
+    if any(x not in manual for x in ('source_request_id=NULL', 'paid_amount=NULL', 'paid_duration_days=NULL',
+                                    "revision::text IS NOT DISTINCT FROM before_row->>'stored_revision'")):
+        raise ValueError('Misattributed payment or missing concurrent-insert check')
+    if 'PERFORM pg_advisory_xact_lock(' in funcs['public.sellnova_orders_before_update'][2]:
+        raise ValueError('Late order-row lock inversion')
+
 
 
 class AdminBackendTests(unittest.TestCase):
@@ -83,6 +94,9 @@ class AdminBackendTests(unittest.TestCase):
             self.sql.replace(' TO authenticated;', ' TO anon;'),
             self.sql.replace(',921)', ',999)'),
             self.sql.replace(' PERFORM pg_advisory_xact_lock(hashtextextended(_store_id::text,921));', ' PERFORM 1 FROM public.stores;'),
+            self.sql.replace('FOR NO KEY UPDATE', 'FOR UPDATE'),
+            self.sql.replace(' NEW.revision:=gen_random_uuid();', ' PERFORM pg_advisory_xact_lock(1); NEW.revision:=gen_random_uuid();'),
+            self.sql.replace('source_request_id=NULL', 'source_request_id=public.store_subscriptions.source_request_id'),
             self.sql+'\nDELETE FROM public.products;',
             self.sql+'\nUPDATE public.subscription_requests SET amount=1;',
         ]
@@ -115,7 +129,7 @@ class AdminBackendTests(unittest.TestCase):
     def test_revision_covers_same_plan_edits_and_effective_expiry(self):
         self.assertIn('BEFORE INSERT OR UPDATE ON public.store_subscriptions', self.sql)
         self.assertIn('NEW.revision:=gen_random_uuid()', self.funcs['sellnova_dev.subscription_revision'][2])
-        self.assertIn('hashtextextended(NEW.store_id::text,921)', self.funcs['sellnova_dev.subscription_revision'][2])
+        self.assertNotIn('advisory_xact_lock(', self.funcs['sellnova_dev.subscription_revision'][2])
         row = self.funcs['sellnova_dev.subscription_row'][2]
         self.assertIn("sub.revision::text", row)
         self.assertIn("||':'||allowance::text||':'||effective", row)
@@ -141,15 +155,86 @@ class AdminBackendTests(unittest.TestCase):
             self.assertIn('Paid subscription is already active', self.funcs['public.'+name][2])
 
     def test_free_paid_limits_and_no_catalog_rewrite(self):
-        limit = self.funcs['public.sellnova_publication_limit'][2]
+        limit = self.funcs['sellnova_dev.publication_limit_at'][2]
         self.assertIn("pl.code='paid'", limit)
         self.assertIn('THEN 50 ELSE 12', limit)
-        self.assertIn('clock_timestamp()', limit)
+        self.assertIn('ss.expires_at>_at', limit)
+        self.assertIn('clock_timestamp()', self.funcs['public.sellnova_publication_limit'][2])
         state = self.funcs['public.sellnova_publication_state'][2]
         self.assertIn("allowance=50 THEN 'paid'", state)
         self.assertNotIn('allowance=100', self.sql)
-        for table in ('products', 'stores', 'orders', 'order_items', 'store_branding'):
-            self.assertNotRegex(self.sql, r'(UPDATE|DELETE FROM|INSERT INTO) public\.'+table+r'\b')
+        # Top-level backfills are checked by the AST boundary validator. Existing
+        # order-trigger stock DML is preserved and checked separately below.
+        validate_boundary(self.sql)
+
+    def test_trigger_has_no_late_wait_and_store_fk_locks_are_compatible(self):
+        revision = self.funcs['sellnova_dev.subscription_revision'][2]
+        self.assertNotIn('advisory_xact_lock(', revision)
+        for name in ('sellnova_admin_set_subscription', 'sellnova_begin_payment', 'sellnova_notify_payment', 'sellnova_review_payment'):
+            body = self.funcs['public.'+name][2]
+            self.assertRegex(body, r'FROM public\.stores[^;]+FOR NO KEY UPDATE;')
+            self.assertNotRegex(body, r'FROM public\.stores[^;]+FOR UPDATE;')
+        manual = self.funcs['public.sellnova_admin_set_subscription'][2]
+        bank = self.funcs['public.sellnova_review_payment'][2]
+        self.assertIn("revision::text IS NOT DISTINCT FROM before_row->>'stored_revision'", manual)
+        self.assertIn('revision IS NOT DISTINCT FROM cur.revision', bank)
+        self.assertIn("IF NOT FOUND THEN RAISE EXCEPTION 'Subscription changed", manual)
+        self.assertIn("IF NOT FOUND THEN RAISE EXCEPTION 'Subscription changed", bank)
+
+    def test_manual_provenance_cleared_without_rewriting_payments(self):
+        body = self.funcs['public.sellnova_admin_set_subscription'][2]
+        for assignment in ('source_request_id=NULL', 'paid_amount=NULL', 'paid_duration_days=NULL', 'started_at=EXCLUDED.started_at'):
+            self.assertIn(assignment, body)
+        self.assertNotRegex(body, r'(UPDATE|DELETE FROM|INSERT INTO) public\.subscription_requests')
+        self.assertLess(body.index('before_row:='), body.index('source_request_id=NULL'))
+        self.assertIn("'before',sellnova_dev.subscription_snapshot(before_row)", body)
+
+    def test_old_service_writers_are_retired_not_reexposed(self):
+        for name in ('sellnova_set_subscription_state', 'sellnova_decide_subscription'):
+            body = self.funcs['public.'+name][2]
+            self.assertIn("ERRCODE='42501'", body)
+            self.assertNotRegex(body, r'(UPDATE|INSERT INTO|DELETE FROM|FOR UPDATE)')
+            self.assertIn("has_function_privilege('service_role','public."+name, self.sql)
+
+    def test_order_trigger_changes_only_late_lock_waits(self):
+        original = routines((ROOT/'database/development/corrections/001_order_integrity.sql').read_text())['public.sellnova_orders_before_update'][2]
+        replacement = "IF NOT pg_try_advisory_xact_lock(hashtextextended(OLD.store_id::text,921)) THEN\n        RAISE EXCEPTION 'Store is busy; retry the order update' USING ERRCODE='40001'; END IF;"
+        expected = original.replace('PERFORM pg_advisory_xact_lock(hashtextextended(OLD.store_id::text,921));', replacement)
+        body = self.funcs['public.sellnova_orders_before_update'][2]
+        self.assertEqual(body, expected)
+        self.assertEqual(body.count('pg_try_advisory_xact_lock('), 2)
+        self.assertNotIn('PERFORM pg_advisory_xact_lock(', body)
+
+    def test_single_expiry_instant_and_inactive_public_helper(self):
+        for name in ('public.sellnova_publication_state', 'sellnova_dev.subscription_row'):
+            body = self.funcs[name][2]
+            self.assertIn('at_time timestamptz:=clock_timestamp()', body)
+            self.assertIn('publication_limit_at(_store_id,at_time)', body)
+            self.assertIn('sub.expires_at<=at_time', body)
+        self.assertIn('sellnova_effective_plan', self.funcs['public.sellnova_store_max_products'][2])
+        self.assertIn("_expires_at>='10000-01-01", self.funcs['public.sellnova_admin_set_subscription'][2])
+        bank = self.funcs['public.sellnova_review_payment'][2]
+        self.assertIn("r.payment_snapshot->'price_ngn' IS DISTINCT FROM to_jsonb(r.amount)", bank)
+        self.assertIn("r.payment_snapshot->'duration_days' IS DISTINCT FROM to_jsonb(r.duration_days)", bank)
+
+    def test_replace_function_signatures_preserve_postgresql_dependencies(self):
+        from pglast.stream import RawStream
+        previous = {}
+        for _, _, sql in load_plan()[:18]:
+            previous.update(routines(sql))
+        def render(node):
+            return RawStream()(node)
+        for name, (node, _, _) in self.funcs.items():
+            if not node.replace:
+                continue
+            with self.subTest(function=name):
+                old = previous[name][0]
+                self.assertEqual(render(old.returnType), render(node.returnType))
+                self.assertEqual(old.returnType.setof, node.returnType.setof)
+                self.assertEqual([(p.name, render(p.argType), p.mode) for p in old.parameters or ()],
+                                 [(p.name, render(p.argType), p.mode) for p in node.parameters or ()])
+                self.assertEqual([render(p.defexpr) if p.defexpr else None for p in old.parameters or ()],
+                                 [render(p.defexpr) if p.defexpr else None for p in node.parameters or ()])
 
     def test_existing_integration_execution_gate_unchanged(self):
         text = (ROOT/'scripts/devdb/integration.py').read_text()

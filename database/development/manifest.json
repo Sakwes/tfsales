@@ -75,7 +75,7 @@
     },
     {
       "path": "database/development/corrections/008_admin_subscription_management.sql",
-      "sha256": "bfedfd42aa9316675c3a55d8a1a0f5f18a09a9cfa84c980dcadfe1a280e9e662"
+      "sha256": "bf33cccea4ea7ef73fde4d6eb9ae55ced682be6bc63938b62a00e231dc681bde"
     }
   ]
 }
