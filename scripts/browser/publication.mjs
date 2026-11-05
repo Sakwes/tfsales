@@ -9,9 +9,9 @@ const products=Array.from({length:15},(_,i)=>({id:`44444444-4444-4444-8444-${Str
  publication_selected:true,created_at:new Date(2020,0,i+1).toISOString()}));
 let expires=Date.now()+3600000, version=1, selection=products.map(p=>p.id), failCatalog=false, checkouts=0;
 const active=()=>Date.now()<expires;
-const visible=()=>products.filter(p=>selection.includes(p.id)).slice(0,active()?100:12);
-const state=()=>({plan:active()?'paid':'free',status:active()?'active':'expired',allowance:active()?100:12,saved_count:products.length,
- selected_ids:selection,visible_ids:visible().map(p=>p.id),version:`${version}:${active()?100:12}`,expires_at:new Date(expires).toISOString(),server_time:new Date().toISOString()});
+const visible=()=>products.filter(p=>selection.includes(p.id)).slice(0,active()?50:12);
+const state=()=>({plan:active()?'paid':'free',status:active()?'active':'expired',allowance:active()?50:12,saved_count:products.length,
+ selected_ids:selection,visible_ids:visible().map(p=>p.id),version:`${version}:${active()?50:12}`,expires_at:new Date(expires).toISOString(),server_time:new Date().toISOString()});
 const unexpected=[],calls=[];
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','4176','--strictPort'],{
  env:{...process.env,SELLNOVA_ISOLATED_MOCKS:'1',VITE_SUPABASE_URL:api,VITE_SUPABASE_PUBLISHABLE_KEY:'mock-public-key'},stdio:['ignore','pipe','pipe']});
@@ -55,7 +55,7 @@ try {
    if(u.searchParams.has('id'))rows=rows.filter(p=>'eq.'+p.id===u.searchParams.get('id'));
    return reply(rows.map(p=>({...p,publication_selected:selection.includes(p.id)})),200,{'content-range':`0-${Math.max(0,rows.length-1)}/${rows.length}`});
   }
-  if(endpoint==='plans')return reply([{id:'free',code:'free',name:'Free',max_products:12,price_ngn:0,duration_days:3650},{id:paid,code:'paid',name:'Paid',max_products:100,price_ngn:1500,duration_days:30}]);
+  if(endpoint==='plans')return reply([{id:'free',code:'free',name:'Free',max_products:12,price_ngn:0,duration_days:3650},{id:paid,code:'paid',name:'Paid',max_products:50,price_ngn:1500,duration_days:30}]);
   if(endpoint==='store_subscriptions')return reply({store_id:store,plan_id:paid,status:'active',expires_at:new Date(expires).toISOString()});
   if(endpoint==='platform_settings')return reply({id:true,version:1,payment_collection_enabled:true});
   if(endpoint==='subscription_requests')return reply([]);
@@ -64,7 +64,7 @@ try {
  const ownerContext=await browser.newContext();await ownerContext.route('**/*',route);
  await ownerContext.addInitScript(({seller})=>localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:'mock-access-token',refresh_token:'mock-refresh-token',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,user:{id:seller,email:'mock@example.test',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{}}})),{seller});
  const dashboard=await ownerContext.newPage();await dashboard.goto(origin+'/seller/dashboard');
- await expect(dashboard.getByText('15 saved · 15 publicly visible · allowance 100')).toBeVisible();
+ await expect(dashboard.getByText('15 saved · 15 publicly visible · allowance 50')).toBeVisible();
  // The hook's server-relative expiry timer refreshes without logout, navigation or focus.
  expires=Date.now()+1200;await dashboard.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect(dashboard.getByText('15 saved · 12 publicly visible · allowance 12')).toBeVisible();
@@ -93,13 +93,13 @@ try {
  console.log('PASS anonymous filtered catalog, hidden direct-link mock, retained old cart and blocked stale checkout');
 
  expires=Date.now()+3600000;await dashboard.evaluate(()=>window.dispatchEvent(new Event('focus')));
- await expect(dashboard.getByText('15 saved · 12 publicly visible · allowance 100')).toBeVisible();
+ await expect(dashboard.getByText('15 saved · 12 publicly visible · allowance 50')).toBeVisible();
  await shop.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect.poll(()=>shop.locator('header').evaluate(el=>getComputedStyle(el).backgroundImage)).toContain('rgb(18, 51, 84)');
  await expect(shop.getByRole('button',{name:/View details for Catalog/})).toHaveCount(12);
  for(const name of ['Catalog 01','Catalog 14','Catalog 15'])await dashboard.getByRole('checkbox',{name:new RegExp(name)}).check();
  await dashboard.getByRole('button',{name:'Save publication selection'}).click();
- await expect(dashboard.getByText('15 saved · 15 publicly visible · allowance 100')).toBeVisible();
+ await expect(dashboard.getByText('15 saved · 15 publicly visible · allowance 50')).toBeVisible();
  await shop.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect(shop.getByRole('button',{name:/View details for Catalog/})).toHaveCount(15);
  console.log('PASS renewal restores allowance/branding, intentionally unpublished stays hidden until explicitly selected');

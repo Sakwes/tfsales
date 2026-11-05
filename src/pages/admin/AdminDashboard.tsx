@@ -745,6 +745,7 @@ const AdminDashboard = () => {
                     <TableRow key={seller.id}>
                       <TableCell className="font-medium">
                         {seller.store_name}
+                        <Link className="block text-sm underline" to={`/admin/subscriptions/manage?store=${seller.store_id}`}>Manage subscription</Link>
                       </TableCell>
                       <TableCell className="text-sm">{seller.email}</TableCell>
                       <TableCell className="font-mono text-sm">

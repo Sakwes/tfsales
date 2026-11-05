@@ -276,9 +276,12 @@ def run():
             check_billing(owner, ids)
             from publication_integration import check_publication
             check_publication(owner, ids)
+            from admin_subscription_integration import check_admin_subscriptions
+            check_admin_subscriptions(owner, ids)
         finally:
             if initialized:
                 with owner.transaction():
+                    owner.execute('DELETE FROM sellnova_dev.subscription_operations WHERE store_id IN (%s,%s)',(ids['store_a'],ids['store_b']))
                     owner.execute('DELETE FROM public.admin_audit_log WHERE store_id IN (%s,%s)',(ids['store_a'],ids['store_b']))
                     owner.execute('DELETE FROM sellnova_dev.rate_windows WHERE subject LIKE %s OR subject=%s',
                                   (str(ids['store_a'])+'%',str(ids['product'])))

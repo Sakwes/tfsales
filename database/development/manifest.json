@@ -72,6 +72,10 @@
     {
       "path": "database/development/corrections/007_product_publication.sql",
       "sha256": "6df14582f2b9e8f876afae34b1ac6ff77a34745fa5782dc0fd67ec7aedfab30f"
+    },
+    {
+      "path": "database/development/corrections/008_admin_subscription_management.sql",
+      "sha256": "bfedfd42aa9316675c3a55d8a1a0f5f18a09a9cfa84c980dcadfe1a280e9e662"
     }
   ]
 }

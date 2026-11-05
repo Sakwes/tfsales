@@ -21,7 +21,7 @@ const plans = [
     id: paidId,
     code: "paid",
     name: "Paid",
-    max_products: 100,
+    max_products: 50,
     price_ngn: 1500,
     duration_days: 30,
     allow_stock: true,
@@ -137,7 +137,7 @@ try {
       calls.push({ endpoint, body });
       if (endpoint === "sellnova_publication_state") {
         const active = subscription?.status === 'active' && (!subscription.expires_at || Date.parse(subscription.expires_at) > Date.now());
-        return reply({ plan: active ? 'paid' : 'free', status: subscription?.status === 'active' && !active ? 'expired' : subscription?.status ?? 'free', allowance: active ? 100 : 12, saved_count: 5, selected_ids: [], visible_ids: [], version: 'mock-publication', expires_at: subscription?.expires_at ?? null, server_time: new Date().toISOString() });
+        return reply({ plan: active ? 'paid' : 'free', status: subscription?.status === 'active' && !active ? 'expired' : subscription?.status ?? 'free', allowance: active ? 50 : 12, saved_count: 5, selected_ids: [], visible_ids: [], version: 'mock-publication', expires_at: subscription?.expires_at ?? null, server_time: new Date().toISOString() });
       }
       if (endpoint === "sellnova_begin_payment") {
         assert.deepEqual(body, { _store_id: store });
@@ -252,7 +252,7 @@ try {
   const page = await context.newPage();
   await page.goto(origin + "/seller/subscription");
   await expect(page.getByText("Free forever")).toBeVisible();
-  await expect(page.getByText("Up to 100 products")).toBeVisible();
+  await expect(page.getByText("Up to 50 products")).toBeVisible();
   await page.getByRole("button", { name: "Get payment instructions" }).click();
   await expect(page.getByText("Your saved payment instructions")).toBeVisible();
   // Global fee change must not change the displayed saved quote.

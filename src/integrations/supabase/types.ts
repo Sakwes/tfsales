@@ -782,6 +782,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      sellnova_admin_list_subscriptions: { Args: { _search: string; _filter: string; _offset: number; _limit: number; _store_id: string | null }; Returns: Json }
+      sellnova_admin_subscription_history: { Args: { _store_id: string; _offset: number; _limit: number }; Returns: Json }
+      sellnova_admin_set_subscription: { Args: { _store_id: string; _action: "paid" | "free"; _expires_at: string | null; _reason: string; _expected_revision: string; _operation_id: string }; Returns: Json }
       sellnova_storefront_products: { Args: { _store_id: string }; Returns: Database["public"]["Tables"]["products"]["Row"][] }
       sellnova_public_product_ids: { Args: { _store_id: string }; Returns: string[] }
       sellnova_publication_state: { Args: { _store_id: string }; Returns: Json }

@@ -371,7 +371,7 @@ class OfflineSafetyTests(unittest.TestCase):
 
     def test_manifest_contains_exact_eight_historical_files_first(self):
         files=migrate.load_plan()
-        self.assertEqual(len(files),18)
+        self.assertEqual(len(files),19)
         self.assertTrue(all(path.startswith(('supabase/migrations/','drizzle/migrations/')) for path,_,_ in files[:8]))
         self.assertTrue(all(path.startswith('database/development/') for path,_,_ in files[8:]))
 

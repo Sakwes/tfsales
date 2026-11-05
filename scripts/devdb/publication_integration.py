@@ -119,9 +119,9 @@ def check_publication(owner, ids):
         current = state()
         as_user(owner, select_sql, (store, all_ids, current['version']))
         assert len(public()) == 15
-        owner.execute("INSERT INTO public.products(store_id,name,price) SELECT %s,'Paid cap '||i,1000 FROM generate_series(1,85) i", (store,))
-        assert state()['saved_count'] == 100 and len(public()) == 100
-        must_fail(owner, insert_sql, (store, 'Paid 101'), user=seller, states=('P0001',))
+        owner.execute("INSERT INTO public.products(store_id,name,price) SELECT %s,'Paid cap '||i,1000 FROM generate_series(1,35) i", (store,))
+        assert state()['saved_count'] == 50 and len(public()) == 50
+        must_fail(owner, insert_sql, (store, 'Paid 51'), user=seller, states=('P0001',))
         print('PASS permanent Free, concurrent caps/selections, expiry, public RLS, hidden checkout, history and renewal restoration')
     finally:
         if created:

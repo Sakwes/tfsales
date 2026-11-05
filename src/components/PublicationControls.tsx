@@ -38,7 +38,7 @@ export function PublicationControls({ storeId, products, onState, onSaved }: {
     {error ? <div role="alert">{error}<Button variant="outline" onClick={() => void refresh()}>Refresh publication</Button></div> : !state ? <p role="status">Checking publication allowance…</p> : <>
       <p>Current plan: {state.plan === "paid" ? "Paid" : "Free"}{state.status === "expired" ? " — Paid subscription expired" : ""}</p>
       <p>{state.saved_count} saved · {state.visible_ids.length} publicly visible · allowance {state.allowance}</p>
-      {state.plan === "free" && <p>Free access has no time limit. <Link className="underline" to="/seller/subscription">Upgrade for up to 100 products</Link>.</p>}
+      {state.plan === "free" && <p>Free access has no time limit. <Link className="underline" to="/seller/subscription">Upgrade for up to 50 products</Link>.</p>}
       <p>Choose which products customers can see. Uncheck one before selecting a replacement. Saving replaces your publication selection; it never deletes products or images.</p>
       {state.selected_ids.length > state.allowance && <p role="status">Your earlier selection is preserved. The oldest {state.allowance} selected products are visible until you save a different selection.</p>}
       {dirty && state.version !== version && <p role="alert">Products or your plan changed. Reload the selection before saving.</p>}

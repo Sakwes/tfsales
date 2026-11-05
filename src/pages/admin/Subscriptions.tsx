@@ -249,6 +249,7 @@ export default function AdminSubscriptions() {
         <Link className="underline" to="/admin">
           Back to admin dashboard
         </Link>
+        <Link className="block underline mt-3" to="/admin/subscriptions/manage">Manage seller subscription access</Link>
         <h1 className="text-3xl font-bold mt-4">Subscriptions and payments</h1>
         <p>Configure bank transfers and verify payment notifications.</p>
       </header>
